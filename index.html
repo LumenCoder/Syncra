@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syncra - Blackhole AI</title>
+  <title>Syncra - Animated Black Hole</title>
   <style>
-    /* Reset & global styles */
+    /* Reset & Global Styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
       width: 100%;
@@ -13,7 +13,7 @@
       background: #000;
       font-family: sans-serif;
     }
-    /* Background canvas fills screen */
+    /* Background Canvas for Stars & Comet */
     #backgroundCanvas {
       position: fixed;
       top: 0;
@@ -22,7 +22,7 @@
       height: 100%;
       z-index: 0;
     }
-    /* Centered container for logo and input */
+    /* Centered Container */
     .container {
       position: relative;
       z-index: 2;
@@ -34,13 +34,13 @@
       justify-content: center;
       gap: 30px;
     }
-    /* Blackhole logo canvas */
+    /* Logo Canvas Styling */
     #logoCanvas {
       width: 200px;
       height: 200px;
       background: transparent;
     }
-    /* Glass-effect input box */
+    /* Glass-Effect Input Box */
     .glass-input {
       width: 300px;
       padding: 15px;
@@ -64,7 +64,7 @@
       50% { border-width: 4px; }
       100% { border-width: 2px; }
     }
-    /* Popup styling */
+    /* Popup Styling */
     .popup {
       position: fixed;
       top: 20%;
@@ -87,13 +87,13 @@
   </style>
 </head>
 <body>
-  <!-- Background Canvas for Stars & Comet -->
+  <!-- Background Canvas -->
   <canvas id="backgroundCanvas"></canvas>
 
   <div class="container">
-    <!-- Blackhole Logo Canvas -->
+    <!-- Animated Black Hole Logo Canvas -->
     <canvas id="logoCanvas" width="200" height="200"></canvas>
-    <!-- Glass-effect Input Box -->
+    <!-- Glass-Effect Input Box -->
     <input type="text" id="inputBox" class="glass-input" placeholder="Ask me something..." />
   </div>
 
@@ -119,4 +119,153 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Initialize star
+    // Initialize stars with random positions, sizes, and twinkle factors
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < numStars; i++) {
+        stars.push({
+          x: Math.random() * bgCanvas.width,
+          y: Math.random() * bgCanvas.height,
+          radius: Math.random() * 1.5,
+          twinkle: Math.random() * Math.PI * 2,
+          speed: 0.02 + Math.random() * 0.03
+        });
+      }
+    }
+    initStars();
+
+    // Initialize the comet with starting position and trajectory
+    function initComet() {
+      comet = {
+        x: -50,
+        y: Math.random() * bgCanvas.height * 0.5,
+        length: 150,
+        speed: 3,
+        angle: Math.PI / 4 // 45 degrees
+      };
+    }
+    initComet();
+
+    function updateBackground() {
+      // Clear background
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      bgCtx.fillStyle = '#000';
+      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+      // Draw stars with twinkling effect
+      for (let star of stars) {
+        star.twinkle += star.speed;
+        const alpha = (Math.sin(star.twinkle) + 1) / 2; // oscillates between 0 and 1
+        bgCtx.beginPath();
+        bgCtx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        bgCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+        bgCtx.fill();
+      }
+
+      // Update and draw comet
+      if (comet) {
+        comet.x += comet.speed;
+        comet.y += comet.speed * Math.tan(comet.angle);
+        if (comet.x - comet.length > bgCanvas.width || comet.y - comet.length > bgCanvas.height) {
+          initComet();
+        }
+        bgCtx.save();
+        bgCtx.translate(comet.x, comet.y);
+        bgCtx.rotate(comet.angle);
+        let gradient = bgCtx.createLinearGradient(0, 0, -comet.length, 0);
+        gradient.addColorStop(0, 'rgba(255,255,255,1)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        bgCtx.strokeStyle = gradient;
+        bgCtx.lineWidth = 2;
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, 0);
+        bgCtx.lineTo(-comet.length, 0);
+        bgCtx.stroke();
+        bgCtx.restore();
+      }
+      requestAnimationFrame(updateBackground);
+    }
+    updateBackground();
+
+    /* ------------------------- */
+    /* Animated Black Hole Logo */
+    /* ------------------------- */
+    const logoCanvas = document.getElementById('logoCanvas');
+    const logoCtx = logoCanvas.getContext('2d');
+    let rotation = 0;
+    let blackHoleIntensity = 1; // Default intensity multiplier
+    let isSearching = false; // Tracks if user is searching
+
+    function drawBlackHole() {
+      // Clear canvas
+      logoCtx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
+      
+      const centerX = logoCanvas.width / 2;
+      const centerY = logoCanvas.height / 2;
+      
+      logoCtx.save();
+      logoCtx.translate(centerX, centerY);
+      logoCtx.rotate(rotation);
+      
+      // Draw the swirling accretion disk using a radial gradient
+      // Disk radius increases with intensity for a more dramatic effect
+      const diskRadius = 80 * blackHoleIntensity;
+      let gradient = logoCtx.createRadialGradient(0, 0, 20, 0, 0, diskRadius);
+      gradient.addColorStop(0, 'rgba(255, 140, 0, 0.9)');
+      gradient.addColorStop(0.5, 'rgba(255, 0, 0, 0.8)');
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      logoCtx.fillStyle = gradient;
+      logoCtx.beginPath();
+      logoCtx.arc(0, 0, diskRadius, 0, 2 * Math.PI);
+      logoCtx.fill();
+      
+      // Draw the central event horizon of the black hole
+      logoCtx.beginPath();
+      logoCtx.arc(0, 0, 30, 0, 2 * Math.PI);
+      logoCtx.fillStyle = 'black';
+      logoCtx.fill();
+      
+      logoCtx.restore();
+      
+      // Increase rotation speed based on intensity
+      rotation += 0.01 * blackHoleIntensity;
+      
+      // Gradually reduce intensity when not searching
+      if (!isSearching && blackHoleIntensity > 1) {
+        blackHoleIntensity -= 0.01;
+        if (blackHoleIntensity < 1) blackHoleIntensity = 1;
+      }
+      
+      requestAnimationFrame(drawBlackHole);
+    }
+    drawBlackHole();
+
+    /* ------------------------- */
+    /* Input & Popup Interaction */
+    /* ------------------------- */
+    const inputBox = document.getElementById('inputBox');
+    const popup = document.getElementById('popup');
+    inputBox.addEventListener('input', () => {
+      inputBox.classList.remove('animate-border');
+      // Trigger reflow to restart the animation
+      void inputBox.offsetWidth;
+      inputBox.classList.add('animate-border');
+    });
+    inputBox.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        isSearching = true;
+        // Intensify the black hole animation
+        blackHoleIntensity = 3;
+        inputBox.disabled = true;
+        // Simulate a brief "thinking" phase
+        setTimeout(() => {
+          isSearching = false;
+          popup.style.display = 'block';
+          popup.style.animation = "fadeIn 0.5s ease";
+        }, 2000);
+      }
+    });
+  </script>
+</body>
+</html>
