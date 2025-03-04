@@ -188,7 +188,7 @@
     updateBackground();
 
     /* ------------------------- */
-    /* Animated Black Hole Logo */
+    /* Animated Black Hole Logo with Rings */
     /* ------------------------- */
     const logoCanvas = document.getElementById('logoCanvas');
     const logoCtx = logoCanvas.getContext('2d');
@@ -199,16 +199,15 @@
     function drawBlackHole() {
       // Clear canvas
       logoCtx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
-      
       const centerX = logoCanvas.width / 2;
       const centerY = logoCanvas.height / 2;
       
       logoCtx.save();
       logoCtx.translate(centerX, centerY);
-      logoCtx.rotate(rotation);
       
-      // Draw the swirling accretion disk using a radial gradient
-      // Disk radius increases with intensity for a more dramatic effect
+      // Draw swirling accretion disk (rotating)
+      logoCtx.save();
+      logoCtx.rotate(rotation);
       const diskRadius = 80 * blackHoleIntensity;
       let gradient = logoCtx.createRadialGradient(0, 0, 20, 0, 0, diskRadius);
       gradient.addColorStop(0, 'rgba(255, 140, 0, 0.9)');
@@ -218,24 +217,50 @@
       logoCtx.beginPath();
       logoCtx.arc(0, 0, diskRadius, 0, 2 * Math.PI);
       logoCtx.fill();
-      
-      // Draw the central event horizon of the black hole
+      logoCtx.restore();
+
+      // Draw animated outer ring
+      logoCtx.save();
+      // Rotate the outer ring at a different rate for dynamic effect
+      logoCtx.rotate(rotation * 1.2);
+      let ring1RX = diskRadius + 10 + 5 * Math.sin(rotation * 2);
+      let ring1RY = (diskRadius + 10) * 0.6 + 5 * Math.cos(rotation * 2);
+      logoCtx.beginPath();
+      logoCtx.ellipse(0, 0, ring1RX, ring1RY, 0, 0, 2 * Math.PI);
+      logoCtx.strokeStyle = 'rgba(255, 150, 0, 0.5)';
+      logoCtx.lineWidth = 3;
+      logoCtx.stroke();
+      logoCtx.restore();
+
+      // Draw animated inner ring (just outside the event horizon)
+      logoCtx.save();
+      logoCtx.rotate(-rotation * 0.8);
+      let ring2Base = 40; // base radius for the inner ring (beyond the 30px event horizon)
+      let ring2RX = ring2Base + 3 * Math.cos(rotation * 3);
+      let ring2RY = ring2Base * 0.8 + 3 * Math.sin(rotation * 3);
+      logoCtx.beginPath();
+      logoCtx.ellipse(0, 0, ring2RX, ring2RY, 0, 0, 2 * Math.PI);
+      logoCtx.strokeStyle = 'rgba(255, 80, 0, 0.7)';
+      logoCtx.lineWidth = 2;
+      logoCtx.stroke();
+      logoCtx.restore();
+
+      // Draw the central event horizon on top
       logoCtx.beginPath();
       logoCtx.arc(0, 0, 30, 0, 2 * Math.PI);
       logoCtx.fillStyle = 'black';
       logoCtx.fill();
-      
+
       logoCtx.restore();
-      
-      // Increase rotation speed based on intensity
+
+      // Update rotation speed based on intensity
       rotation += 0.01 * blackHoleIntensity;
-      
+
       // Gradually reduce intensity when not searching
       if (!isSearching && blackHoleIntensity > 1) {
         blackHoleIntensity -= 0.01;
         if (blackHoleIntensity < 1) blackHoleIntensity = 1;
       }
-      
       requestAnimationFrame(drawBlackHole);
     }
     drawBlackHole();
