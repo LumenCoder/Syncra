@@ -1,76 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Syncra</title>
+  <meta charset="UTF-8">
+  <title>Syncra - Fluid AI</title>
   <style>
-    /* Global Styles */
-    * {
-      box-sizing: border-box;
-    }
+    /* Reset & global styles */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
-      font-family: 'Arial', sans-serif;
       overflow: hidden;
       background: #000;
-      color: #fff;
+      font-family: sans-serif;
     }
-    
-    /* Starry background with red hints */
-    .stars {
-      position: absolute;
+    /* Background canvas fills screen */
+    #backgroundCanvas {
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: radial-gradient(ellipse at bottom, #2c0000 0%, #000 100%);
       z-index: 0;
-      overflow: hidden;
     }
-    /* Create subtle star layers using pseudo-elements */
-    .stars::before,
-    .stars::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 200%;
-      height: 200%;
-      background-image: radial-gradient(white 1px, transparent 1px);
-      background-size: 3px 3px;
-      opacity: 0.3;
-      animation: moveStars 50s linear infinite;
-    }
-    @keyframes moveStars {
-      from { transform: translate(0,0); }
-      to { transform: translate(-50%, -50%); }
-    }
-    
-    /* Comet element */
-    .comet {
-      position: absolute;
-      top: -50px;
-      left: -100px;
-      width: 3px;
-      height: 100px;
-      background: linear-gradient(white, transparent);
-      transform: rotate(45deg);
-      opacity: 0;
-      animation: cometAnimation 7s linear infinite;
-      z-index: 1;
-    }
-    @keyframes cometAnimation {
-      0% { top: -50px; left: -100px; opacity: 0; }
-      10% { opacity: 1; }
-      50% { top: 80%; left: 80%; opacity: 1; }
-      90% { opacity: 0; }
-      100% { top: 80%; left: 80%; opacity: 0; }
-    }
-    
-    /* Container for logo and input */
+    /* Centered container for logo and input */
     .container {
       position: relative;
       z-index: 2;
@@ -80,35 +32,20 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      gap: 30px;
     }
-    
-    /* Logo design */
-    .logo {
+    /* Fluid ball logo canvas */
+    #logoCanvas {
       width: 200px;
       height: 200px;
-      position: relative;
+      background: transparent;
     }
-    .logo svg {
-      width: 100%;
-      height: 100%;
-    }
-    /* “Thinking” animation applied on Enter */
-    .logo.animate-thinking {
-      animation: thinkingAnimation 2s infinite;
-    }
-    @keyframes thinkingAnimation {
-      0% { transform: rotate(0deg) scale(1); }
-      50% { transform: rotate(15deg) scale(1.1); }
-      100% { transform: rotate(0deg) scale(1); }
-    }
-    
     /* Glass-effect input box */
     .glass-input {
       width: 300px;
       padding: 15px;
       font-size: 16px;
-      border: 2px solid rgba(255, 0, 0, 0); /* starts transparent */
+      border: 2px solid rgba(255, 0, 0, 0);
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(10px);
@@ -117,9 +54,8 @@
       transition: border 0.3s ease;
     }
     .glass-input:focus {
-      border: 2px solid rgba(255, 0, 0, 1); /* red border appears on focus */
+      border: 2px solid rgba(255, 0, 0, 1);
     }
-    /* Fluid “wave” effect on each input */
     .glass-input.animate-border {
       animation: fluidBorder 0.5s ease;
     }
@@ -128,8 +64,7 @@
       50% { border-width: 4px; }
       100% { border-width: 2px; }
     }
-    
-    /* Warning popup styling */
+    /* Popup styling */
     .popup {
       position: fixed;
       top: 20%;
@@ -152,58 +87,175 @@
   </style>
 </head>
 <body>
-  <div class="stars"></div>
-  <div class="comet"></div>
-  
+  <!-- Background Canvas for Stars & Comet -->
+  <canvas id="backgroundCanvas"></canvas>
+
   <div class="container">
-    <!-- Animated Logo -->
-    <div class="logo" id="logo">
-      <svg viewBox="0 0 100 100">
-        <!-- A pulsating circle (like a lively AI core) -->
-        <circle cx="50" cy="50" r="30" fill="none" stroke="red" stroke-width="2">
-          <animate attributeName="r" from="30" to="35" dur="1s" repeatCount="indefinite" />
-        </circle>
-        <!-- Centered text for the logo -->
-        <text x="50%" y="55%" text-anchor="middle" fill="white" font-size="12" font-family="Arial">
-          SYNCRA
-        </text>
-      </svg>
-    </div>
-    
+    <!-- Fluid Ball Logo Canvas -->
+    <canvas id="logoCanvas" width="200" height="200"></canvas>
     <!-- Glass-effect Input Box -->
-    <input type="text" class="glass-input" id="inputBox" placeholder="Ask me something..." />
+    <input type="text" id="inputBox" class="glass-input" placeholder="Ask me something..." />
   </div>
-  
+
   <!-- Warning Popup -->
   <div class="popup" id="popup">
     awh snap, im really sorry, my database has not been enabled, im sorry
   </div>
-  
-  <script>
-    // References to elements
-    const inputBox = document.getElementById('inputBox');
-    const logo = document.getElementById('logo');
-    const popup = document.getElementById('popup');
 
-    // Add fluid border animation when typing
+  <script>
+    /* ------------------------- */
+    /* Background Animation Code */
+    /* ------------------------- */
+    const bgCanvas = document.getElementById('backgroundCanvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    let stars = [];
+    const numStars = 200;
+    let comet = null;
+
+    function resizeCanvas() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Initialize stars with random positions, sizes, and twinkle factors
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < numStars; i++) {
+        stars.push({
+          x: Math.random() * bgCanvas.width,
+          y: Math.random() * bgCanvas.height,
+          radius: Math.random() * 1.5,
+          twinkle: Math.random() * Math.PI * 2,
+          speed: 0.02 + Math.random() * 0.03
+        });
+      }
+    }
+    initStars();
+
+    // Initialize the comet with starting position and trajectory
+    function initComet() {
+      comet = {
+        x: -50,
+        y: Math.random() * bgCanvas.height * 0.5,
+        length: 150,
+        speed: 3,
+        angle: Math.PI / 4 // 45 degrees
+      };
+    }
+    initComet();
+
+    function updateBackground() {
+      // Clear background
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      bgCtx.fillStyle = '#000';
+      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+      // Draw stars and update their twinkle
+      for (let star of stars) {
+        star.twinkle += star.speed;
+        const alpha = (Math.sin(star.twinkle) + 1) / 2; // oscillates between 0 and 1
+        bgCtx.beginPath();
+        bgCtx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        bgCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+        bgCtx.fill();
+      }
+
+      // Update and draw comet
+      if (comet) {
+        comet.x += comet.speed;
+        comet.y += comet.speed * Math.tan(comet.angle);
+        if (comet.x - comet.length > bgCanvas.width || comet.y - comet.length > bgCanvas.height) {
+          initComet();
+        }
+        bgCtx.save();
+        bgCtx.translate(comet.x, comet.y);
+        bgCtx.rotate(comet.angle);
+        let gradient = bgCtx.createLinearGradient(0, 0, -comet.length, 0);
+        gradient.addColorStop(0, 'rgba(255,255,255,1)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        bgCtx.strokeStyle = gradient;
+        bgCtx.lineWidth = 2;
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, 0);
+        bgCtx.lineTo(-comet.length, 0);
+        bgCtx.stroke();
+        bgCtx.restore();
+      }
+      requestAnimationFrame(updateBackground);
+    }
+    updateBackground();
+
+    /* ------------------------- */
+    /* Fluid Ball Logo Animation */
+    /* ------------------------- */
+    const logoCanvas = document.getElementById('logoCanvas');
+    const logoCtx = logoCanvas.getContext('2d');
+    let logoTime = 0;
+    let isThinking = false;
+    const numPoints = 20;
+    const baseRadius = 80;
+    const centerX = logoCanvas.width / 2;
+    const centerY = logoCanvas.height / 2;
+    let phases = [];
+    for (let i = 0; i < numPoints; i++) {
+      phases.push(Math.random() * Math.PI * 2);
+    }
+
+    // Draw a fluid, morphing blob using oscillating points
+    function drawFluidBall() {
+      logoCtx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
+      logoCtx.beginPath();
+      const angleStep = (Math.PI * 2) / numPoints;
+      for (let i = 0; i <= numPoints; i++) {
+        let angle = i * angleStep;
+        // Increase oscillation amplitude when "thinking"
+        const amplitude = isThinking ? 15 : 7;
+        let offset = Math.sin(logoTime + phases[i % numPoints]) * amplitude;
+        let r = baseRadius + offset;
+        let x = centerX + r * Math.cos(angle);
+        let y = centerY + r * Math.sin(angle);
+        if (i === 0) {
+          logoCtx.moveTo(x, y);
+        } else {
+          logoCtx.lineTo(x, y);
+        }
+      }
+      logoCtx.closePath();
+      // Create a dynamic radial gradient for a fluid look
+      const grad = logoCtx.createRadialGradient(centerX, centerY, baseRadius / 2, centerX, centerY, baseRadius);
+      grad.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+      logoCtx.fillStyle = grad;
+      logoCtx.fill();
+      logoCtx.strokeStyle = 'rgba(255, 50, 50, 0.9)';
+      logoCtx.lineWidth = 3;
+      logoCtx.stroke();
+      logoTime += isThinking ? 0.2 : 0.05;
+      requestAnimationFrame(drawFluidBall);
+    }
+    drawFluidBall();
+
+    /* ------------------------- */
+    /* Input & Popup Interaction */
+    /* ------------------------- */
+    const inputBox = document.getElementById('inputBox');
+    const popup = document.getElementById('popup');
     inputBox.addEventListener('input', () => {
       inputBox.classList.remove('animate-border');
-      // Restart animation
+      // Trigger reflow to restart animation
       void inputBox.offsetWidth;
       inputBox.classList.add('animate-border');
     });
-
-    // Listen for the Enter key
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Start logo thinking animation
-        logo.classList.add('animate-thinking');
-        // Disable input during "thinking"
+        isThinking = true;
         inputBox.disabled = true;
-        // After 2 seconds, stop thinking and show the warning popup
+        // Simulate a brief "thinking" phase
         setTimeout(() => {
-          logo.classList.remove('animate-thinking');
+          isThinking = false;
           popup.style.display = 'block';
           popup.style.animation = "fadeIn 0.5s ease";
         }, 2000);
