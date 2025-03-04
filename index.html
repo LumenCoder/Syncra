@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syncra - Fluid AI</title>
+  <title>Syncra - Blackhole AI</title>
   <style>
     /* Reset & global styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,7 +34,7 @@
       justify-content: center;
       gap: 30px;
     }
-    /* Fluid ball logo canvas */
+    /* Blackhole logo canvas */
     #logoCanvas {
       width: 200px;
       height: 200px;
@@ -91,7 +91,7 @@
   <canvas id="backgroundCanvas"></canvas>
 
   <div class="container">
-    <!-- Fluid Ball Logo Canvas -->
+    <!-- Blackhole Logo Canvas -->
     <canvas id="logoCanvas" width="200" height="200"></canvas>
     <!-- Glass-effect Input Box -->
     <input type="text" id="inputBox" class="glass-input" placeholder="Ask me something..." />
@@ -119,148 +119,4 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Initialize stars with random positions, sizes, and twinkle factors
-    function initStars() {
-      stars = [];
-      for (let i = 0; i < numStars; i++) {
-        stars.push({
-          x: Math.random() * bgCanvas.width,
-          y: Math.random() * bgCanvas.height,
-          radius: Math.random() * 1.5,
-          twinkle: Math.random() * Math.PI * 2,
-          speed: 0.02 + Math.random() * 0.03
-        });
-      }
-    }
-    initStars();
-
-    // Initialize the comet with starting position and trajectory
-    function initComet() {
-      comet = {
-        x: -50,
-        y: Math.random() * bgCanvas.height * 0.5,
-        length: 150,
-        speed: 3,
-        angle: Math.PI / 4 // 45 degrees
-      };
-    }
-    initComet();
-
-    function updateBackground() {
-      // Clear background
-      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-      bgCtx.fillStyle = '#000';
-      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-
-      // Draw stars and update their twinkle
-      for (let star of stars) {
-        star.twinkle += star.speed;
-        const alpha = (Math.sin(star.twinkle) + 1) / 2; // oscillates between 0 and 1
-        bgCtx.beginPath();
-        bgCtx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        bgCtx.fillStyle = `rgba(255,255,255,${alpha})`;
-        bgCtx.fill();
-      }
-
-      // Update and draw comet
-      if (comet) {
-        comet.x += comet.speed;
-        comet.y += comet.speed * Math.tan(comet.angle);
-        if (comet.x - comet.length > bgCanvas.width || comet.y - comet.length > bgCanvas.height) {
-          initComet();
-        }
-        bgCtx.save();
-        bgCtx.translate(comet.x, comet.y);
-        bgCtx.rotate(comet.angle);
-        let gradient = bgCtx.createLinearGradient(0, 0, -comet.length, 0);
-        gradient.addColorStop(0, 'rgba(255,255,255,1)');
-        gradient.addColorStop(1, 'rgba(255,255,255,0)');
-        bgCtx.strokeStyle = gradient;
-        bgCtx.lineWidth = 2;
-        bgCtx.beginPath();
-        bgCtx.moveTo(0, 0);
-        bgCtx.lineTo(-comet.length, 0);
-        bgCtx.stroke();
-        bgCtx.restore();
-      }
-      requestAnimationFrame(updateBackground);
-    }
-    updateBackground();
-
-    /* ------------------------- */
-    /* Fluid Ball Logo Animation */
-    /* ------------------------- */
-    const logoCanvas = document.getElementById('logoCanvas');
-    const logoCtx = logoCanvas.getContext('2d');
-    let logoTime = 0;
-    let isThinking = false;
-    const numPoints = 20;
-    const baseRadius = 80;
-    const centerX = logoCanvas.width / 2;
-    const centerY = logoCanvas.height / 2;
-    let phases = [];
-    for (let i = 0; i < numPoints; i++) {
-      phases.push(Math.random() * Math.PI * 2);
-    }
-
-    // Draw a fluid, morphing blob using oscillating points
-    function drawFluidBall() {
-      logoCtx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
-      logoCtx.beginPath();
-      const angleStep = (Math.PI * 2) / numPoints;
-      for (let i = 0; i <= numPoints; i++) {
-        let angle = i * angleStep;
-        // Increase oscillation amplitude when "thinking"
-        const amplitude = isThinking ? 15 : 7;
-        let offset = Math.sin(logoTime + phases[i % numPoints]) * amplitude;
-        let r = baseRadius + offset;
-        let x = centerX + r * Math.cos(angle);
-        let y = centerY + r * Math.sin(angle);
-        if (i === 0) {
-          logoCtx.moveTo(x, y);
-        } else {
-          logoCtx.lineTo(x, y);
-        }
-      }
-      logoCtx.closePath();
-      // Create a dynamic radial gradient for a fluid look
-      const grad = logoCtx.createRadialGradient(centerX, centerY, baseRadius / 2, centerX, centerY, baseRadius);
-      grad.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
-      grad.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
-      logoCtx.fillStyle = grad;
-      logoCtx.fill();
-      logoCtx.strokeStyle = 'rgba(255, 50, 50, 0.9)';
-      logoCtx.lineWidth = 3;
-      logoCtx.stroke();
-      logoTime += isThinking ? 0.2 : 0.05;
-      requestAnimationFrame(drawFluidBall);
-    }
-    drawFluidBall();
-
-    /* ------------------------- */
-    /* Input & Popup Interaction */
-    /* ------------------------- */
-    const inputBox = document.getElementById('inputBox');
-    const popup = document.getElementById('popup');
-    inputBox.addEventListener('input', () => {
-      inputBox.classList.remove('animate-border');
-      // Trigger reflow to restart animation
-      void inputBox.offsetWidth;
-      inputBox.classList.add('animate-border');
-    });
-    inputBox.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        isThinking = true;
-        inputBox.disabled = true;
-        // Simulate a brief "thinking" phase
-        setTimeout(() => {
-          isThinking = false;
-          popup.style.display = 'block';
-          popup.style.animation = "fadeIn 0.5s ease";
-        }, 2000);
-      }
-    });
-  </script>
-</body>
-</html>
+    // Initialize star
