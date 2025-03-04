@@ -207,13 +207,18 @@
     directionalLight.position.set(100, 100, 100);
     scene.add(directionalLight);
 
-    // Global intensity value that increases when searching
+    // Global intensity that increases when searching
     let intensity = 1;
     let isSearching = false;
 
     // Create the black hole event horizon (a sphere)
     const horizonGeometry = new THREE.SphereGeometry(30, 32, 32);
-    const horizonMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 1, metalness: 0 });
+    const horizonMaterial = new THREE.MeshStandardMaterial({
+      color: 0x222222,
+      emissive: 0x444444,
+      roughness: 1,
+      metalness: 0
+    });
     const blackHole = new THREE.Mesh(horizonGeometry, horizonMaterial);
     scene.add(blackHole);
 
@@ -245,7 +250,7 @@
     outerRing.rotation.x = Math.PI / 2;
     scene.add(outerRing);
 
-    // Optionally, add subtle particle effects to simulate swirling matter
+    // Optional particle effects for swirling matter
     const particlesGeometry = new THREE.BufferGeometry();
     const particlesCount = 500;
     const positions = new Float32Array(particlesCount * 3);
@@ -262,15 +267,20 @@
     // Animation loop for the 3D black hole
     function animate3D() {
       requestAnimationFrame(animate3D);
-      // Increase rotation speeds and scaling based on intensity
+      // Increase rotation speeds based on intensity
       accretionDisk.rotation.z += 0.01 * intensity;
       outerRing.rotation.z += 0.008 * intensity;
       blackHole.rotation.y += 0.005 * intensity;
       
-      // Scale the disks for a pulsating effect
-      const scale = intensity;
-      accretionDisk.scale.set(scale, scale, scale);
-      outerRing.scale.set(scale, scale, scale);
+      // Instead of scaling directly by intensity (which may overscale),
+      // use a clamped factor so the rings remain in view.
+      const scaleFactor = 1 + (intensity - 1) * 0.5; 
+      accretionDisk.scale.set(scaleFactor, scaleFactor, scaleFactor);
+      outerRing.scale.set(scaleFactor, scaleFactor, scaleFactor);
+      
+      // Optionally, adjust emissive intensity to enhance the glow during search
+      diskMaterial.emissiveIntensity = intensity;
+      ringMaterial.emissiveIntensity = intensity * 0.8;
       
       // Gradually reduce intensity when not searching
       if (!isSearching && intensity > 1) {
@@ -296,7 +306,7 @@
       if (e.key === 'Enter') {
         e.preventDefault();
         isSearching = true;
-        // Enhance the black hole by increasing intensity dramatically
+        // Enhance the black hole effect
         intensity = 3;
         inputBox.disabled = true;
         // Simulate a brief "thinking" phase before showing the popup
