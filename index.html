@@ -82,7 +82,8 @@
       z-index: 3;
     }
     @keyframes fadeIn {
-      from { opacity: 0; } to { opacity: 1; }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
   </style>
 </head>
@@ -110,7 +111,7 @@
     let searchStartTime = null; // Set when user presses Enter
     let isSearching = false;    // True during the search pulse phase
 
-    // Helper functions
+    // Helpers
     function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
     function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -123,9 +124,9 @@
     const minComets = 1;
     const maxComets = 5;
     // Intro timings (in ms)
-    const introStarsDuration = 1000;
-    const introCometsDelay = 1000;
-    const introCometsDuration = 1000;
+    const introStarsDuration = 1000;       // Stars fade in over 1s
+    const introCometsDelay = 1000;           // Comets start after 1s
+    const introCometsDuration = 1000;        // Comets fade in over 1s
 
     function resizeBgCanvas() {
       bgCanvas.width = window.innerWidth;
@@ -154,7 +155,7 @@
         y: Math.random() * bgCanvas.height,
         length: 100 + Math.random() * 100,
         speed: 2 + Math.random() * 2,
-        angle: (Math.random() - 0.5) * 0.2
+        angle: (Math.random() - 0.5) * 0.2 
       };
     }
     function initComets() {
@@ -175,7 +176,7 @@
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
-      // Draw stars with fading effect
+      // Draw stars
       for (let star of stars) {
         star.twinkle += star.speed;
         const baseAlpha = (Math.sin(star.twinkle) + 1) / 2;
@@ -186,7 +187,7 @@
         bgCtx.fill();
       }
 
-      // Draw comets with fading in
+      // Draw comets
       for (let comet of comets) {
         comet.x += comet.speed;
         comet.y += comet.speed * comet.angle;
@@ -230,10 +231,17 @@
     const pulseMagnitude = 0.1; // 10% extra scale
 
     // Intro timings (in ms)
-    const introFluidDelay = 2000;
-    const introFluidDuration = 1000;
-    const introRingsDelay = 3000;
-    const introRingsDuration = 1000;
+    const introFluidDelay = 0;       // Fluid ball appears immediately
+    const introFluidDuration = 1000;   // Fade in over 1s
+    const introRingsDelay = 1000;      // Rings appear after 1s
+    const introRingsDuration = 1000;   // Fade in over 1s
+
+    // Initialize phases for fluid motion
+    let phases = [];
+    for (let i = 0; i < numPoints; i++) {
+      phases.push(Math.random() * Math.PI * 2);
+    }
+    const numRings = 3;
 
     function drawFluidBallAndWormhole() {
       const now = performance.now();
@@ -243,10 +251,11 @@
 
       ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
 
+      // Compute intro progress values
       const fluidProgress = clamp((elapsed - introFluidDelay) / introFluidDuration, 0, 1);
       const ringsProgress = clamp((elapsed - introRingsDelay) / introRingsDuration, 0, 1);
 
-      // Compute base scales: fluid ball scales from 1.5 to 1, rings from 0.5 to 1
+      // Compute scales: fluid ball from 1.5 to 1; rings from 0.5 to 1
       let fluidScale = lerp(1.5, 1, fluidProgress);
       let ringsScale = lerp(0.5, 1, ringsProgress);
 
@@ -257,11 +266,11 @@
         ringsScale *= (1 + pulseMagnitude * 0.5);
       }
 
-      // Easing for amplitude to smoothly transition from normal to thinking
+      // Easing for amplitude transition
       const targetAmplitude = isSearching ? thinkingAmplitude : normalAmplitude;
       currentAmplitude += (targetAmplitude - currentAmplitude) * 0.1 * delta;
 
-      // Draw Fluid Ball
+      // Draw Fluid Ball with fade-in and scale transform
       ctx.save();
       ctx.translate(centerX, centerY);
       ctx.scale(fluidScale, fluidScale);
@@ -275,7 +284,8 @@
         let r = baseBallRadius + offset;
         let x = centerX + r * Math.cos(angle);
         let y = centerY + r * Math.sin(angle);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       ctx.closePath();
       let ballGrad = ctx.createRadialGradient(centerX, centerY, baseBallRadius * 0.3, centerX, centerY, baseBallRadius);
@@ -284,6 +294,7 @@
       ballGrad.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.fillStyle = ballGrad;
       ctx.fill();
+      // Draw central core
       ctx.beginPath();
       ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
       ctx.fillStyle = 'black';
@@ -292,7 +303,7 @@
       ctx.globalAlpha = 1;
 
       // Draw Wormhole Rings
-      for (let ring = 0; ring < 3; ring++) {
+      for (let ring = 0; ring < numRings; ring++) {
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.scale(ringsScale, ringsScale);
@@ -307,7 +318,8 @@
           let r = ringBase + distortion;
           let x = centerX + r * Math.cos(angle + ringRotation);
           let y = centerY + r * Math.sin(angle + ringRotation);
-          if (angle === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          if (angle === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
         ctx.closePath();
         ctx.strokeStyle = `rgba(255,255,255,${0.5 - ring * 0.1})`;
@@ -329,7 +341,7 @@
     function updateTextIntro() {
       const now = performance.now();
       const elapsed = now - introStartTime;
-      const introTextDelay = 4000;  // text appears after 4s
+      const introTextDelay = 2000; // text appears after 2s
       const introTextDuration = 1000;
       const progress = clamp((elapsed - introTextDelay) / introTextDuration, 0, 1);
       if (progress >= 1) textContainer.classList.add('visible');
