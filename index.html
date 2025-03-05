@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syncra - GLSL Black Hole</title>
+  <title>Syncra - Dynamic Fluid Black Hole</title>
   <style>
     /* Reset & Global Styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,7 +34,7 @@
       justify-content: center;
       gap: 30px;
     }
-    /* Logo Canvas Styling */
+    /* Logo Canvas for Dynamic Fluid Black Hole */
     #logoCanvas {
       width: 200px;
       height: 200px;
@@ -85,25 +85,23 @@
       to { opacity: 1; }
     }
   </style>
-  <!-- Include Three.js from CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/three.min.js"></script>
 </head>
 <body>
   <!-- Background Canvas -->
   <canvas id="backgroundCanvas"></canvas>
-  
+
   <div class="container">
-    <!-- Logo Canvas for GLSL Black Hole -->
+    <!-- Dynamic Fluid Black Hole Logo Canvas -->
     <canvas id="logoCanvas" width="200" height="200"></canvas>
     <!-- Glass-Effect Input Box -->
     <input type="text" id="inputBox" class="glass-input" placeholder="Ask me something..." />
   </div>
-  
+
   <!-- Warning Popup -->
   <div class="popup" id="popup">
     awh snap, im really sorry, my database has not been enabled, im sorry
   </div>
-  
+
   <script>
     /* ------------------------- */
     /* Background Animation Code */
@@ -113,14 +111,14 @@
     let stars = [];
     const numStars = 200;
     let comet = null;
-    
+
     function resizeCanvas() {
       bgCanvas.width = window.innerWidth;
       bgCanvas.height = window.innerHeight;
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-    
+
     // Initialize twinkling stars
     function initStars() {
       stars = [];
@@ -135,7 +133,7 @@
       }
     }
     initStars();
-    
+
     // Initialize comet parameters
     function initComet() {
       comet = {
@@ -143,16 +141,17 @@
         y: Math.random() * bgCanvas.height * 0.5,
         length: 150,
         speed: 3,
-        angle: Math.PI / 4 // 45 degrees
+        angle: Math.PI / 4  // 45 degrees
       };
     }
     initComet();
-    
+
     function updateBackground() {
       bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-    
+
+      // Draw stars with twinkling effect
       for (let star of stars) {
         star.twinkle += star.speed;
         const alpha = (Math.sin(star.twinkle) + 1) / 2;
@@ -161,7 +160,8 @@
         bgCtx.fillStyle = `rgba(255,255,255,${alpha})`;
         bgCtx.fill();
       }
-    
+
+      // Update and draw comet
       if (comet) {
         comet.x += comet.speed;
         comet.y += comet.speed * Math.tan(comet.angle);
@@ -185,101 +185,67 @@
       requestAnimationFrame(updateBackground);
     }
     updateBackground();
-    
+
     /* ------------------------- */
-    /* GLSL Shader Black Hole Code */
+    /* Dynamic Fluid Black Hole Logo */
     /* ------------------------- */
     const logoCanvas = document.getElementById('logoCanvas');
-    const renderer = new THREE.WebGLRenderer({ canvas: logoCanvas, alpha: true, antialias: true });
-    renderer.setSize(logoCanvas.width, logoCanvas.height);
-    
-    // Create an orthographic scene for a full-quad shader
-    const logoScene = new THREE.Scene();
-    const logoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    
-    // Vertex Shader: pass through UV coordinates
-    const vertexShader = `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = vec4(position, 1.0);
-      }
-    `;
-    
-    // Fragment Shader: creates a swirling black hole effect
-    const fragmentShader = `
-      uniform float u_time;
-      uniform float u_intensity;
-      uniform vec2 u_resolution;
-      varying vec2 vUv;
-      
-      void main() {
-        // Center UV coordinates around (0,0)
-        vec2 uv = vUv - 0.5;
-        uv.x *= u_resolution.x / u_resolution.y;
-        
-        // Convert to polar coordinates
-        float r = length(uv);
-        float angle = atan(uv.y, uv.x);
-        
-        // Apply a swirling distortion that increases with intensity
-        float swirl = sin(u_time + r * 10.0) * u_intensity * 0.2;
-        angle += swirl;
-        
-        // Reconstruct the warped coordinates
-        vec2 warped = vec2(r * cos(angle), r * sin(angle));
-        
-        // Create the accretion disk effect: a luminous orange disk with a subtle halo
-        float disk = smoothstep(0.35, 0.4, r);
-        float halo = smoothstep(0.45, 0.5, r);
-        
-        vec3 diskColor = mix(vec3(0.0), vec3(1.0, 0.6, 0.1), disk);
-        vec3 haloColor = vec3(0.2, 0.1, 0.0) * halo;
-        
-        // Black center for the event horizon
-        vec3 color = vec3(0.0);
-        if(r > 0.2) {
-          color = diskColor + haloColor;
-        }
-        
-        gl_FragColor = vec4(color, 1.0);
-      }
-    `;
-    
-    // Create the shader material with uniforms for time, intensity, and resolution
-    const shaderMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        u_time: { value: 0.0 },
-        u_intensity: { value: 1.0 },
-        u_resolution: { value: new THREE.Vector2(logoCanvas.width, logoCanvas.height) }
-      },
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader
-    });
-    
-    // Create a plane covering the entire view
-    const planeGeometry = new THREE.PlaneGeometry(2, 2);
-    const quad = new THREE.Mesh(planeGeometry, shaderMaterial);
-    logoScene.add(quad);
-    
-    const clock = new THREE.Clock();
-    let isSearching = false;
-    
-    // Animation loop for the GLSL shader
-    function animateShader() {
-      requestAnimationFrame(animateShader);
-      shaderMaterial.uniforms.u_time.value += clock.getDelta();
-      // Gradually reduce intensity when not in search mode
-      if (!isSearching && shaderMaterial.uniforms.u_intensity.value > 1.0) {
-        shaderMaterial.uniforms.u_intensity.value -= 0.01;
-        if (shaderMaterial.uniforms.u_intensity.value < 1.0) {
-          shaderMaterial.uniforms.u_intensity.value = 1.0;
-        }
-      }
-      renderer.render(logoScene, logoCamera);
+    const ctx = logoCanvas.getContext('2d');
+    const centerX = logoCanvas.width / 2;
+    const centerY = logoCanvas.height / 2;
+    const numPoints = 40;
+    const baseRadius = 80;
+    let fluidTime = 0;
+    let isThinking = false;
+    let phases = [];
+    for (let i = 0; i < numPoints; i++) {
+      phases.push(Math.random() * Math.PI * 2);
     }
-    animateShader();
-    
+
+    function drawDynamicFluidBlackHole() {
+      ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
+
+      // Draw the outer swirling accretion disk (fluid shape)
+      ctx.beginPath();
+      const angleStep = (Math.PI * 2) / numPoints;
+      for (let i = 0; i <= numPoints; i++) {
+        let angle = i * angleStep;
+        const amplitude = isThinking ? 20 : 10;
+        let offset = Math.sin(fluidTime + phases[i % numPoints]) * amplitude;
+        let r = baseRadius + offset;
+        let x = centerX + r * Math.cos(angle);
+        let y = centerY + r * Math.sin(angle);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.closePath();
+      // Create a radial gradient for the accretion disk
+      let grad = ctx.createRadialGradient(centerX, centerY, baseRadius * 0.2, centerX, centerY, baseRadius);
+      grad.addColorStop(0, 'rgba(255, 140, 0, 1)'); // bright orange
+      grad.addColorStop(0.7, 'rgba(0, 0, 0, 0.8)');  // dark transition
+      grad.addColorStop(1, 'rgba(0, 0, 0, 1)');        // black
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Draw the central event horizon as a solid black circle
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+      ctx.fillStyle = 'black';
+      ctx.fill();
+
+      // Optional subtle stroke around the fluid shape
+      ctx.strokeStyle = 'rgba(255, 80, 0, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      fluidTime += isThinking ? 0.2 : 0.05;
+      requestAnimationFrame(drawDynamicFluidBlackHole);
+    }
+    drawDynamicFluidBlackHole();
+
     /* ------------------------- */
     /* Input & Popup Interaction */
     /* ------------------------- */
@@ -291,16 +257,13 @@
       void inputBox.offsetWidth;
       inputBox.classList.add('animate-border');
     });
-    
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        isSearching = true;
-        // Increase shader intensity to enhance the black hole effect
-        shaderMaterial.uniforms.u_intensity.value = 3.0;
+        isThinking = true;
         inputBox.disabled = true;
         setTimeout(() => {
-          isSearching = false;
+          isThinking = false;
           popup.style.display = 'block';
           popup.style.animation = "fadeIn 0.5s ease";
         }, 2000);
