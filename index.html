@@ -96,10 +96,8 @@
   
   <script>
     /* ========= Global Variables ========= */
-    let isThinking = false; // Controls the "thinking" phase
-    let lastCometAddTime = Date.now();
-    let lastCometRemoveTime = Date.now();
-    
+    let isThinking = false; // "Thinking" phase flag
+
     /* ========= Background Animation ========= */
     const bgCanvas = document.getElementById('backgroundCanvas');
     const bgCtx = bgCanvas.getContext('2d');
@@ -108,17 +106,17 @@
     let comets = [];
     const maxComets = 5;
     const minComets = 1;
-    const cometAddInterval = 500;    // milliseconds between adding comets
-    const cometRemoveInterval = 500; // milliseconds between removing comets
-    
+    const cometAddInterval = 500;    // ms between adding comets
+    const cometRemoveInterval = 500; // ms between removing comets
+
     function resizeCanvas() {
       bgCanvas.width = window.innerWidth;
       bgCanvas.height = window.innerHeight;
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-    
-    // Initialize twinkling stars
+
+    // Initialize stars with random positions and twinkle factors
     function initStars() {
       stars = [];
       for (let i = 0; i < numStars; i++) {
@@ -132,18 +130,19 @@
       }
     }
     initStars();
-    
-    // Create a comet object
+
+    // Create a comet from the left edge at a random vertical position
     function createComet() {
       return {
         x: -50,
-        y: Math.random() * bgCanvas.height * 0.5,
-        length: 150,
-        speed: 3,
-        angle: Math.PI / 4
+        y: Math.random() * bgCanvas.height,
+        length: 100 + Math.random() * 100,
+        speed: 2 + Math.random() * 2,
+        // Small angle: -0.1 to 0.1 radians
+        angle: (Math.random() - 0.5) * 0.2 
       };
     }
-    // Initialize comets with a minimum number
+    // Initialize comets with a minimum count
     function initComets() {
       comets = [];
       for (let i = 0; i < minComets; i++) {
@@ -151,9 +150,9 @@
       }
     }
     initComets();
-    
+
     function updateBackground() {
-      // Gradually add or remove comets based on the thinking state
+      // Gradually add extra comets during "thinking"
       if (isThinking) {
         if (Date.now() - lastCometAddTime > cometAddInterval && comets.length < maxComets) {
           comets.push(createComet());
@@ -161,7 +160,7 @@
         }
       } else {
         if (Date.now() - lastCometRemoveTime > cometRemoveInterval && comets.length > minComets) {
-          comets.pop();
+          comets.shift(); // remove from beginning
           lastCometRemoveTime = Date.now();
         }
       }
@@ -180,12 +179,13 @@
         bgCtx.fill();
       }
       
-      // Draw each comet
+      // Update and draw each comet
       for (let comet of comets) {
         comet.x += comet.speed;
-        comet.y += comet.speed * Math.tan(comet.angle);
-        // Reset comet if it goes off-screen
-        if (comet.x - comet.length > bgCanvas.width || comet.y - comet.length > bgCanvas.height) {
+        // A slight vertical drift based on angle
+        comet.y += comet.speed * comet.angle;
+        // Reset comet if it goes off the right side
+        if (comet.x > bgCanvas.width + comet.length) {
           Object.assign(comet, createComet());
         }
         bgCtx.save();
@@ -204,8 +204,10 @@
       }
       requestAnimationFrame(updateBackground);
     }
+    let lastCometAddTime = Date.now();
+    let lastCometRemoveTime = Date.now();
     updateBackground();
-    
+
     /* ========= Fluid Ball & Wormhole Animation ========= */
     const logoCanvas = document.getElementById('logoCanvas');
     const ctx = logoCanvas.getContext('2d');
@@ -214,6 +216,7 @@
     const numPoints = 40;
     const baseBallRadius = 40;
     let fluidTime = 0;
+    let lastFrameTime = performance.now();
     let currentSpeed = 0.05;
     const normalSpeed = 0.05;
     const fastSpeed = 0.3;
@@ -223,11 +226,15 @@
     }
     const numRings = 3;
     const baseRingStart = 60;
-    
+
     function drawFluidBallAndWormhole() {
+      let now = performance.now();
+      let delta = (now - lastFrameTime) / 1000; // delta in seconds
+      lastFrameTime = now;
+      
       ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
       
-      // ----- Fluid Ball -----
+      // ----- Draw Fluid Ball -----
       ctx.beginPath();
       const angleStep = (Math.PI * 2) / numPoints;
       // Oscillation amplitude increases when thinking
@@ -238,14 +245,14 @@
         let r = baseBallRadius + offset;
         let x = centerX + r * Math.cos(angle);
         let y = centerY + r * Math.sin(angle);
-        if (i === 0) { ctx.moveTo(x, y); }
-        else { ctx.lineTo(x, y); }
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      // Dark red radial gradient for the fluid ball
+      // Radial gradient: dark red to black
       let ballGrad = ctx.createRadialGradient(centerX, centerY, baseBallRadius * 0.3, centerX, centerY, baseBallRadius);
-      ballGrad.addColorStop(0, 'rgba(200,0,0,1)');    // vibrant dark red center
-      ballGrad.addColorStop(0.8, 'rgba(80,0,0,0.8)');   // deep red fading
+      ballGrad.addColorStop(0, 'rgba(200,0,0,1)');
+      ballGrad.addColorStop(0.8, 'rgba(80,0,0,0.8)');
       ballGrad.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.fillStyle = ballGrad;
       ctx.fill();
@@ -256,8 +263,7 @@
       ctx.fillStyle = 'black';
       ctx.fill();
       
-      // ----- Wormhole Rings -----
-      // Each ring gets its own time offset & rotation for fluid independent motion
+      // ----- Draw Wormhole Rings -----
       const ringAmplitude = isThinking ? 8 : 4;
       for (let ring = 0; ring < numRings; ring++) {
         let ringTime = fluidTime + ring * 0.5;
@@ -269,40 +275,39 @@
           let r = ringBase + distortion;
           let x = centerX + r * Math.cos(angle + ringRotation);
           let y = centerY + r * Math.sin(angle + ringRotation);
-          if (angle === 0) { ctx.moveTo(x, y); }
-          else { ctx.lineTo(x, y); }
+          if (angle === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
         ctx.closePath();
-        // Wormhole rings in white with slight fading for outer rings
+        // White rings with decreasing opacity for outer rings
         ctx.strokeStyle = `rgba(255,255,255,${0.5 - ring * 0.1})`;
         ctx.lineWidth = 2;
         ctx.stroke();
       }
       
-      // Ease the animation speed: smoothly approach fastSpeed when thinking, then ease back
+      // Smoothly ease currentSpeed toward target based on "thinking" state
       const targetSpeed = isThinking ? fastSpeed : normalSpeed;
-      currentSpeed += (targetSpeed - currentSpeed) * 0.1;
-      fluidTime += currentSpeed;
+      currentSpeed += (targetSpeed - currentSpeed) * 0.1 * delta;
+      fluidTime += currentSpeed * delta * 60; // scale to maintain visual speed
       
       requestAnimationFrame(drawFluidBallAndWormhole);
     }
     drawFluidBallAndWormhole();
-    
+
     /* ========= Input & Popup Interaction ========= */
     const inputBox = document.getElementById('inputBox');
     const popup = document.getElementById('popup');
     inputBox.addEventListener('input', () => {
       inputBox.classList.remove('animate-border');
-      // Restart animation on the border
       void inputBox.offsetWidth;
       inputBox.classList.add('animate-border');
     });
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        isThinking = true;  // Trigger the enhanced (faster) animation and extra comets
+        isThinking = true;
         inputBox.disabled = true;
-        // After 2 seconds, gradually revert to normal and show the popup
+        // After 2 seconds, revert and display the error popup
         setTimeout(() => {
           isThinking = false;
           popup.style.display = 'block';
