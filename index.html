@@ -231,10 +231,10 @@
         }
       }
       ctx.closePath();
-      // Create a radial gradient for the fluid ball
+      // Create a radial gradient for the fluid ball with a dark red base
       let ballGrad = ctx.createRadialGradient(centerX, centerY, baseBallRadius * 0.3, centerX, centerY, baseBallRadius);
-      ballGrad.addColorStop(0, 'rgba(150, 0, 200, 1)'); // vibrant purple center
-      ballGrad.addColorStop(0.8, 'rgba(0, 0, 0, 0.8)');  
+      ballGrad.addColorStop(0, 'rgba(200, 0, 0, 1)');   // bright dark red center
+      ballGrad.addColorStop(0.8, 'rgba(80, 0, 0, 0.8)');  // fading into deep red
       ballGrad.addColorStop(1, 'rgba(0, 0, 0, 1)');
       ctx.fillStyle = ballGrad;
       ctx.fill();
@@ -248,17 +248,16 @@
       // --------------------
       // Draw the Wormhole Rings
       // --------------------
-      // Parameters for wormhole rings: amplitude and rotation change when "thinking"
+      // Use independent time offsets for each ring so they move fluidly on their own
       const ringAmplitude = isThinking ? 8 : 4;
-      const ringRotation = fluidTime * 0.2;
       for (let ring = 0; ring < numRings; ring++) {
+        let ringTime = fluidTime + ring * 0.5;
+        let ringRotation = ringTime * (0.2 + ring * 0.05);
         let ringBase = baseRingStart + ring * 10;
         ctx.beginPath();
-        // Draw ring as a distorted circle (using polar coordinates)
         for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
-          let distortion = Math.sin(angle * 5 + fluidTime + ring) * ringAmplitude;
+          let distortion = Math.sin(angle * 5 + ringTime) * ringAmplitude;
           let r = ringBase + distortion;
-          // Apply overall rotation for a swirling effect
           let x = centerX + r * Math.cos(angle + ringRotation);
           let y = centerY + r * Math.sin(angle + ringRotation);
           if (angle === 0) {
@@ -268,13 +267,14 @@
           }
         }
         ctx.closePath();
-        // Use a luminous cyan with fading opacity for the wormhole rings
-        ctx.strokeStyle = `rgba(0, 255, 255, ${0.5 - ring * 0.1})`;
+        // Set ring color to white with decreasing opacity for outer rings
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.5 - ring * 0.1})`;
         ctx.lineWidth = 2;
         ctx.stroke();
       }
       
-      fluidTime += isThinking ? 0.15 : 0.05;
+      // Increase fluidTime faster when "thinking" for a dynamic effect
+      fluidTime += isThinking ? 0.3 : 0.05;
       requestAnimationFrame(drawFluidBallAndWormhole);
     }
     drawFluidBallAndWormhole();
@@ -290,13 +290,11 @@
       void inputBox.offsetWidth;
       inputBox.classList.add('animate-border');
     });
-    
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         isThinking = true;
         inputBox.disabled = true;
-        // Intensify the fluid effects briefly
         setTimeout(() => {
           isThinking = false;
           popup.style.display = 'block';
