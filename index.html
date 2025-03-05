@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syncra - Fluid Ball & Wormhole</title>
+  <title>Syncra - Fluid Ball & Wormhole (Eased & Dynamic Comets)</title>
   <style>
     /* Reset & Global Styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,7 +13,7 @@
       background: #000;
       font-family: sans-serif;
     }
-    /* Background Canvas for Stars & Comet */
+    /* Background Canvas for Stars & Comet(s) */
     #backgroundCanvas {
       position: fixed;
       top: 0;
@@ -110,8 +110,15 @@
     const bgCtx = bgCanvas.getContext('2d');
     let stars = [];
     const numStars = 200;
-    let comet = null;
-    
+    // Use an array for comets so we can add more during "thinking"
+    let comets = [];
+    const maxComets = 5;
+    const minComets = 1;
+    let lastCometAddTime = 0;
+    let lastCometRemoveTime = 0;
+    const cometAddInterval = 500; // ms between adding new comets
+    const cometRemoveInterval = 500; // ms between removing comets
+
     function resizeCanvas() {
       bgCanvas.width = window.innerWidth;
       bgCanvas.height = window.innerHeight;
@@ -134,19 +141,39 @@
     }
     initStars();
     
-    // Initialize comet parameters
-    function initComet() {
-      comet = {
+    // Function to create a comet
+    function createComet() {
+      return {
         x: -50,
         y: Math.random() * bgCanvas.height * 0.5,
         length: 150,
         speed: 3,
-        angle: Math.PI / 4  // 45 degrees
+        angle: Math.PI / 4
       };
     }
-    initComet();
+    // Initialize comets with the minimum count
+    function initComets() {
+      comets = [];
+      for (let i = 0; i < minComets; i++) {
+        comets.push(createComet());
+      }
+    }
+    initComets();
     
     function updateBackground() {
+      // Gradually add or remove comets based on isThinking flag
+      if (isThinking) {
+        if (Date.now() - lastCometAddTime > cometAddInterval && comets.length < maxComets) {
+          comets.push(createComet());
+          lastCometAddTime = Date.now();
+        }
+      } else {
+        if (Date.now() - lastCometRemoveTime > cometRemoveInterval && comets.length > minComets) {
+          comets.pop();
+          lastCometRemoveTime = Date.now();
+        }
+      }
+    
       bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
@@ -161,12 +188,13 @@
         bgCtx.fill();
       }
     
-      // Update and draw comet
-      if (comet) {
+      // Update and draw each comet
+      for (let comet of comets) {
         comet.x += comet.speed;
         comet.y += comet.speed * Math.tan(comet.angle);
+        // Reset comet if it goes off screen
         if (comet.x - comet.length > bgCanvas.width || comet.y - comet.length > bgCanvas.height) {
-          initComet();
+          Object.assign(comet, createComet());
         }
         bgCtx.save();
         bgCtx.translate(comet.x, comet.y);
@@ -198,7 +226,12 @@
     const numPoints = 40;
     const baseBallRadius = 40;
     let fluidTime = 0;
-    let isThinking = false;
+    // We'll use easing for the animation speed:
+    let currentSpeed = 0.05;
+    const normalSpeed = 0.05;
+    const fastSpeed = 0.3;
+    
+    // Generate random phases for the ball
     let phases = [];
     for (let i = 0; i < numPoints; i++) {
       phases.push(Math.random() * Math.PI * 2);
@@ -216,7 +249,7 @@
       // --------------------
       ctx.beginPath();
       const angleStep = (Math.PI * 2) / numPoints;
-      // Increase oscillation amplitude when "thinking"
+      // Oscillation amplitude for the ball; increased when "thinking"
       const ballAmplitude = isThinking ? 8 : 4;
       for (let i = 0; i <= numPoints; i++) {
         let angle = i * angleStep;
@@ -233,8 +266,8 @@
       ctx.closePath();
       // Create a radial gradient for the fluid ball with a dark red base
       let ballGrad = ctx.createRadialGradient(centerX, centerY, baseBallRadius * 0.3, centerX, centerY, baseBallRadius);
-      ballGrad.addColorStop(0, 'rgba(200, 0, 0, 1)');   // bright dark red center
-      ballGrad.addColorStop(0.8, 'rgba(80, 0, 0, 0.8)');  // fading into deep red
+      ballGrad.addColorStop(0, 'rgba(200, 0, 0, 1)');   // dark red center
+      ballGrad.addColorStop(0.8, 'rgba(80, 0, 0, 0.8)');  // fading into deeper red
       ballGrad.addColorStop(1, 'rgba(0, 0, 0, 1)');
       ctx.fillStyle = ballGrad;
       ctx.fill();
@@ -248,7 +281,7 @@
       // --------------------
       // Draw the Wormhole Rings
       // --------------------
-      // Use independent time offsets for each ring so they move fluidly on their own
+      // Each ring gets its own time offset and rotation for fluid independent motion
       const ringAmplitude = isThinking ? 8 : 4;
       for (let ring = 0; ring < numRings; ring++) {
         let ringTime = fluidTime + ring * 0.5;
@@ -267,14 +300,17 @@
           }
         }
         ctx.closePath();
-        // Set ring color to white with decreasing opacity for outer rings
+        // Set ring color to white
         ctx.strokeStyle = `rgba(255, 255, 255, ${0.5 - ring * 0.1})`;
         ctx.lineWidth = 2;
         ctx.stroke();
       }
       
-      // Increase fluidTime faster when "thinking" for a dynamic effect
-      fluidTime += isThinking ? 0.3 : 0.05;
+      // Ease the speed change: smoothly approach fastSpeed or normalSpeed
+      const targetSpeed = isThinking ? fastSpeed : normalSpeed;
+      currentSpeed += (targetSpeed - currentSpeed) * 0.1;
+      fluidTime += currentSpeed;
+      
       requestAnimationFrame(drawFluidBallAndWormhole);
     }
     drawFluidBallAndWormhole();
@@ -284,6 +320,7 @@
     /* ------------------------- */
     const inputBox = document.getElementById('inputBox');
     const popup = document.getElementById('popup');
+    let isThinking = false;
     inputBox.addEventListener('input', () => {
       inputBox.classList.remove('animate-border');
       // Restart the border animation
@@ -293,8 +330,10 @@
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
+        // Set isThinking to true so that easing and extra comets take effect
         isThinking = true;
         inputBox.disabled = true;
+        // After 2 seconds, gradually return to normal (easing and comet removal will handle it)
         setTimeout(() => {
           isThinking = false;
           popup.style.display = 'block';
