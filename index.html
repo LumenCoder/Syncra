@@ -17,7 +17,6 @@
       position: fixed; top: 0; left: 0;
       width: 100%; height: 100%;
       z-index: 0;
-      opacity: 1;
     }
     /* Container for logo and text */
     .container {
@@ -34,9 +33,8 @@
     #logoCanvas {
       width: 200px; height: 200px;
       background: transparent;
-      /* We'll control its opacity via JS introProgress */
     }
-    /* Text input container */
+    /* Text Input Container */
     #textContainer {
       opacity: 0;
       transform: translateY(20px);
@@ -46,7 +44,7 @@
       opacity: 1;
       transform: translateY(0);
     }
-    /* Glass-effect input box */
+    /* Glass-effect Input Box */
     .glass-input {
       width: 300px; padding: 15px;
       font-size: 16px;
@@ -69,7 +67,7 @@
       50% { border-width: 4px; }
       100% { border-width: 2px; }
     }
-    /* Popup styling */
+    /* Popup Styling */
     .popup {
       position: fixed;
       top: 20%; left: 50%;
@@ -84,8 +82,7 @@
       z-index: 3;
     }
     @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from { opacity: 0; } to { opacity: 1; }
     }
   </style>
 </head>
@@ -113,14 +110,9 @@
     let searchStartTime = null; // Set when user presses Enter
     let isSearching = false;    // True during the search pulse phase
 
-    // Helper: clamp value between min and max
-    function clamp(val, min, max) {
-      return Math.max(min, Math.min(max, val));
-    }
-    // Helper: linear interpolation
-    function lerp(a, b, t) {
-      return a + (b - a) * t;
-    }
+    // Helper functions
+    function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
 
     /* ===== BACKGROUND ANIMATION (Stars & Comets) ===== */
     const bgCanvas = document.getElementById('backgroundCanvas');
@@ -130,10 +122,10 @@
     let comets = [];
     const minComets = 1;
     const maxComets = 5;
-    // Intro durations (ms)
-    const introStarsDuration = 2000;
-    const introCometsDelay = 2000;  // stars finished at 2000 ms
-    const introCometsDuration = 2000; // comets fade in over next 2000 ms
+    // Intro timings (in ms)
+    const introStarsDuration = 1000;
+    const introCometsDelay = 1000;
+    const introCometsDuration = 1000;
 
     function resizeBgCanvas() {
       bgCanvas.width = window.innerWidth;
@@ -156,7 +148,6 @@
     }
     initStars();
 
-    // Create a comet starting at the left edge (random y)
     function createComet() {
       return {
         x: -50,
@@ -177,7 +168,6 @@
     function updateBackground() {
       const now = performance.now();
       const elapsed = now - introStartTime;
-      // Compute intro progress for stars and comets
       const starsProgress = clamp(elapsed / introStarsDuration, 0, 1);
       const cometsProgress = clamp((elapsed - introCometsDelay) / introCometsDuration, 0, 1);
 
@@ -185,7 +175,7 @@
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
-      // Draw stars (multiply their alpha by starsProgress)
+      // Draw stars with fading effect
       for (let star of stars) {
         star.twinkle += star.speed;
         const baseAlpha = (Math.sin(star.twinkle) + 1) / 2;
@@ -196,21 +186,19 @@
         bgCtx.fill();
       }
 
-      // Update and draw comets – apply cometsProgress to their opacity
+      // Draw comets with fading in
       for (let comet of comets) {
         comet.x += comet.speed;
         comet.y += comet.speed * comet.angle;
         if (comet.x > bgCanvas.width + comet.length) {
-          // Reinitialize comet (so it completes its journey)
           Object.assign(comet, createComet());
         }
         bgCtx.save();
         bgCtx.translate(comet.x, comet.y);
         bgCtx.rotate(comet.angle);
         let gradient = bgCtx.createLinearGradient(0, 0, -comet.length, 0);
-        // Multiply opacity by cometsProgress
-        gradient.addColorStop(0, `rgba(255,255,255,${1 * cometsProgress})`);
-        gradient.addColorStop(1, `rgba(255,255,255,${0 * cometsProgress})`);
+        gradient.addColorStop(0, `rgba(255,255,255,${cometsProgress})`);
+        gradient.addColorStop(1, `rgba(255,255,255,0)`);
         bgCtx.strokeStyle = gradient;
         bgCtx.lineWidth = 2;
         bgCtx.beginPath();
@@ -232,22 +220,20 @@
     const baseBallRadius = 40;
     let fluidTime = 0;
     let lastFrameTime = performance.now();
-    let currentSpeed = normalSpeed;
+    let currentSpeed = 0.05;
     const normalSpeed = 0.05;
     const fastSpeed = 0.3;
-    // Easing amplitude for fluid ball and rings (for normal vs. thinking pulse)
-    let currentAmplitude = normalAmplitude;
+    let currentAmplitude = 4;
     const normalAmplitude = 4;
     const thinkingAmplitude = 8;
-    // Additional pulse effect (applied during search)
     const pulseFrequency = 2; // Hz
     const pulseMagnitude = 0.1; // 10% extra scale
 
-    // Intro timings for fluid ball and rings:
-    const introFluidDelay = 4000; // fluid ball starts at 4s
-    const introFluidDuration = 2000; // over next 2s
-    const introRingsDelay = 6000; // rings start at 6s
-    const introRingsDuration = 2000; // over next 2s
+    // Intro timings (in ms)
+    const introFluidDelay = 2000;
+    const introFluidDuration = 1000;
+    const introRingsDelay = 3000;
+    const introRingsDuration = 1000;
 
     function drawFluidBallAndWormhole() {
       const now = performance.now();
@@ -257,54 +243,47 @@
 
       ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
 
-      // Compute intro progress for fluid ball and rings
       const fluidProgress = clamp((elapsed - introFluidDelay) / introFluidDuration, 0, 1);
       const ringsProgress = clamp((elapsed - introRingsDelay) / introRingsDuration, 0, 1);
 
-      // Compute base scale for fluid ball: starts at 1.5 and goes to 1
+      // Compute base scales: fluid ball scales from 1.5 to 1, rings from 0.5 to 1
       let fluidScale = lerp(1.5, 1, fluidProgress);
-      // Compute scale for rings: from 0.5 to 1
       let ringsScale = lerp(0.5, 1, ringsProgress);
 
-      // If in search (thinking) phase, add a pulse effect
+      // If in search phase, add a pulse effect
       if (isSearching && searchStartTime) {
         const pulse = 1 + pulseMagnitude * Math.sin((now - searchStartTime) / 1000 * pulseFrequency * 2 * Math.PI);
         fluidScale *= pulse;
-        ringsScale *= (1 + pulseMagnitude * 0.5); // rings grow a bit less
+        ringsScale *= (1 + pulseMagnitude * 0.5);
       }
 
-      // Easing for amplitude: smoothly approach target amplitude
+      // Easing for amplitude to smoothly transition from normal to thinking
       const targetAmplitude = isSearching ? thinkingAmplitude : normalAmplitude;
       currentAmplitude += (targetAmplitude - currentAmplitude) * 0.1 * delta;
 
-      // Draw Fluid Ball with its own fade-in effect (using introFluidProgress)
+      // Draw Fluid Ball
       ctx.save();
-      // Apply fluidScale transform (centered)
       ctx.translate(centerX, centerY);
       ctx.scale(fluidScale, fluidScale);
       ctx.translate(-centerX, -centerY);
-      // Set global opacity for fluid ball based on introFluidProgress
       ctx.globalAlpha = fluidProgress;
       ctx.beginPath();
       const angleStep = (Math.PI * 2) / numPoints;
       for (let i = 0; i <= numPoints; i++) {
         let angle = i * angleStep;
-        let offset = Math.sin(fluidTime + i) * currentAmplitude; // using i for phase variation
+        let offset = Math.sin(fluidTime + phases[i % numPoints]) * currentAmplitude;
         let r = baseBallRadius + offset;
         let x = centerX + r * Math.cos(angle);
         let y = centerY + r * Math.sin(angle);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      // Dark red to black radial gradient for fluid ball
       let ballGrad = ctx.createRadialGradient(centerX, centerY, baseBallRadius * 0.3, centerX, centerY, baseBallRadius);
       ballGrad.addColorStop(0, 'rgba(200,0,0,1)');
       ballGrad.addColorStop(0.8, 'rgba(80,0,0,0.8)');
       ballGrad.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.fillStyle = ballGrad;
       ctx.fill();
-      // Draw central core
       ctx.beginPath();
       ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
       ctx.fillStyle = 'black';
@@ -312,29 +291,25 @@
       ctx.restore();
       ctx.globalAlpha = 1;
 
-      // Draw Wormhole Rings (with their own transform)
+      // Draw Wormhole Rings
       for (let ring = 0; ring < 3; ring++) {
         ctx.save();
-        // Apply ringsScale transform (centered)
         ctx.translate(centerX, centerY);
         ctx.scale(ringsScale, ringsScale);
         ctx.translate(-centerX, -centerY);
-        // Set opacity based on ringsProgress
         ctx.globalAlpha = ringsProgress;
         let ringTime = fluidTime + ring * 0.5;
         let ringRotation = ringTime * (0.2 + ring * 0.05);
-        let ringBase = introRingsDelay > elapsed ? 0 : (60 + ring * 10); // start rings only after delay
+        let ringBase = 60 + ring * 10;
         ctx.beginPath();
         for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
           let distortion = Math.sin(angle * 5 + ringTime) * currentAmplitude;
           let r = ringBase + distortion;
           let x = centerX + r * Math.cos(angle + ringRotation);
           let y = centerY + r * Math.sin(angle + ringRotation);
-          if (angle === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+          if (angle === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.closePath();
-        // White rings with slight fading for outer rings
         ctx.strokeStyle = `rgba(255,255,255,${0.5 - ring * 0.1})`;
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -342,7 +317,6 @@
         ctx.globalAlpha = 1;
       }
 
-      // Smoothly ease currentSpeed toward target speed
       const targetSpeed = isSearching ? fastSpeed : normalSpeed;
       currentSpeed += (targetSpeed - currentSpeed) * 0.1 * delta;
       fluidTime += currentSpeed * delta * 60;
@@ -355,10 +329,9 @@
     function updateTextIntro() {
       const now = performance.now();
       const elapsed = now - introStartTime;
-      const introTextDelay = 8000; // text appears after 8s
-      const introTextDuration = 2000;
+      const introTextDelay = 4000;  // text appears after 4s
+      const introTextDuration = 1000;
       const progress = clamp((elapsed - introTextDelay) / introTextDuration, 0, 1);
-      // When progress is 1, add "visible" class to trigger CSS transition.
       if (progress >= 1) textContainer.classList.add('visible');
       requestAnimationFrame(updateTextIntro);
     }
@@ -375,7 +348,6 @@
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Trigger search pulse animation
         isSearching = true;
         searchStartTime = performance.now();
         inputBox.disabled = true;
