@@ -2,59 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syncra - Fluid Ball & Wormhole</title>
+  <title>Syncra - Fluid Ball & Wormhole (Smooth & Dynamic)</title>
   <style>
-    /* Reset & Global Styles */
+    /* Global Reset & Styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       overflow: hidden;
       background: #000;
       font-family: sans-serif;
     }
-    /* Background Canvas for Stars & Comet */
+    /* Background Canvas */
     #backgroundCanvas {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       z-index: 0;
     }
-    /* Centered Container */
+    /* Main Container */
     .container {
       position: relative;
       z-index: 2;
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 30px;
     }
-    /* Logo Canvas for Fluid Ball & Wormhole */
+    /* Logo Canvas */
     #logoCanvas {
-      width: 200px;
-      height: 200px;
+      width: 200px; height: 200px;
       background: transparent;
     }
     /* Glass-Effect Input Box */
     .glass-input {
-      width: 300px;
-      padding: 15px;
+      width: 300px; padding: 15px;
       font-size: 16px;
-      border: 2px solid rgba(255, 0, 0, 0);
+      border: 2px solid rgba(255,0,0,0);
       border-radius: 10px;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
       color: #fff;
       outline: none;
       transition: border 0.3s ease;
     }
     .glass-input:focus {
-      border: 2px solid rgba(255, 0, 0, 1);
+      border: 2px solid rgba(255,0,0,1);
     }
     .glass-input.animate-border {
       animation: fluidBorder 0.5s ease;
@@ -67,15 +61,13 @@
     /* Popup Styling */
     .popup {
       position: fixed;
-      top: 20%;
-      left: 50%;
+      top: 20%; left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 0, 0, 1);
+      border: 2px solid rgba(255,0,0,1);
       border-radius: 10px;
-      padding: 20px;
-      font-size: 18px;
+      padding: 20px; font-size: 18px;
       color: #fff;
       display: none;
       z-index: 3;
@@ -87,7 +79,7 @@
   </style>
 </head>
 <body>
-  <!-- Background Canvas -->
+  <!-- Background Canvas for Stars & Comets -->
   <canvas id="backgroundCanvas"></canvas>
   
   <div class="container">
@@ -97,20 +89,27 @@
     <input type="text" id="inputBox" class="glass-input" placeholder="Ask me something..." />
   </div>
   
-  <!-- Warning Popup -->
+  <!-- Error Popup -->
   <div class="popup" id="popup">
     awh snap, im really sorry, my database has not been enabled, im sorry
   </div>
   
   <script>
-    /* ------------------------- */
-    /* Background Animation Code */
-    /* ------------------------- */
+    /* ========= Global Variables ========= */
+    let isThinking = false; // Controls the "thinking" phase
+    let lastCometAddTime = Date.now();
+    let lastCometRemoveTime = Date.now();
+    
+    /* ========= Background Animation ========= */
     const bgCanvas = document.getElementById('backgroundCanvas');
     const bgCtx = bgCanvas.getContext('2d');
     let stars = [];
     const numStars = 200;
-    let comet = null;
+    let comets = [];
+    const maxComets = 5;
+    const minComets = 1;
+    const cometAddInterval = 500;    // milliseconds between adding comets
+    const cometRemoveInterval = 500; // milliseconds between removing comets
     
     function resizeCanvas() {
       bgCanvas.width = window.innerWidth;
@@ -134,24 +133,44 @@
     }
     initStars();
     
-    // Initialize comet parameters
-    function initComet() {
-      comet = {
+    // Create a comet object
+    function createComet() {
+      return {
         x: -50,
         y: Math.random() * bgCanvas.height * 0.5,
         length: 150,
         speed: 3,
-        angle: Math.PI / 4  // 45 degrees
+        angle: Math.PI / 4
       };
     }
-    initComet();
+    // Initialize comets with a minimum number
+    function initComets() {
+      comets = [];
+      for (let i = 0; i < minComets; i++) {
+        comets.push(createComet());
+      }
+    }
+    initComets();
     
     function updateBackground() {
+      // Gradually add or remove comets based on the thinking state
+      if (isThinking) {
+        if (Date.now() - lastCometAddTime > cometAddInterval && comets.length < maxComets) {
+          comets.push(createComet());
+          lastCometAddTime = Date.now();
+        }
+      } else {
+        if (Date.now() - lastCometRemoveTime > cometRemoveInterval && comets.length > minComets) {
+          comets.pop();
+          lastCometRemoveTime = Date.now();
+        }
+      }
+      
       bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-    
-      // Draw stars with twinkling effect
+      
+      // Draw stars
       for (let star of stars) {
         star.twinkle += star.speed;
         const alpha = (Math.sin(star.twinkle) + 1) / 2;
@@ -160,13 +179,14 @@
         bgCtx.fillStyle = `rgba(255,255,255,${alpha})`;
         bgCtx.fill();
       }
-    
-      // Update and draw comet
-      if (comet) {
+      
+      // Draw each comet
+      for (let comet of comets) {
         comet.x += comet.speed;
         comet.y += comet.speed * Math.tan(comet.angle);
+        // Reset comet if it goes off-screen
         if (comet.x - comet.length > bgCanvas.width || comet.y - comet.length > bgCanvas.height) {
-          initComet();
+          Object.assign(comet, createComet());
         }
         bgCtx.save();
         bgCtx.translate(comet.x, comet.y);
@@ -186,37 +206,31 @@
     }
     updateBackground();
     
-    /* ------------------------- */
-    /* Fluid Ball & Wormhole Animation */
-    /* ------------------------- */
+    /* ========= Fluid Ball & Wormhole Animation ========= */
     const logoCanvas = document.getElementById('logoCanvas');
     const ctx = logoCanvas.getContext('2d');
     const centerX = logoCanvas.width / 2;
     const centerY = logoCanvas.height / 2;
-    
-    // Fluid ball parameters
     const numPoints = 40;
     const baseBallRadius = 40;
     let fluidTime = 0;
-    let isThinking = false;
+    let currentSpeed = 0.05;
+    const normalSpeed = 0.05;
+    const fastSpeed = 0.3;
     let phases = [];
     for (let i = 0; i < numPoints; i++) {
       phases.push(Math.random() * Math.PI * 2);
     }
-    
-    // Wormhole ring parameters
     const numRings = 3;
     const baseRingStart = 60;
     
     function drawFluidBallAndWormhole() {
       ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
       
-      // --------------------
-      // Draw the Fluid Ball
-      // --------------------
+      // ----- Fluid Ball -----
       ctx.beginPath();
       const angleStep = (Math.PI * 2) / numPoints;
-      // Increase oscillation amplitude when "thinking"
+      // Oscillation amplitude increases when thinking
       const ballAmplitude = isThinking ? 8 : 4;
       for (let i = 0; i <= numPoints; i++) {
         let angle = i * angleStep;
@@ -224,31 +238,26 @@
         let r = baseBallRadius + offset;
         let x = centerX + r * Math.cos(angle);
         let y = centerY + r * Math.sin(angle);
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
+        if (i === 0) { ctx.moveTo(x, y); }
+        else { ctx.lineTo(x, y); }
       }
       ctx.closePath();
-      // Create a radial gradient for the fluid ball with a dark red base
+      // Dark red radial gradient for the fluid ball
       let ballGrad = ctx.createRadialGradient(centerX, centerY, baseBallRadius * 0.3, centerX, centerY, baseBallRadius);
-      ballGrad.addColorStop(0, 'rgba(200, 0, 0, 1)');   // bright dark red center
-      ballGrad.addColorStop(0.8, 'rgba(80, 0, 0, 0.8)');  // fading into deep red
-      ballGrad.addColorStop(1, 'rgba(0, 0, 0, 1)');
+      ballGrad.addColorStop(0, 'rgba(200,0,0,1)');    // vibrant dark red center
+      ballGrad.addColorStop(0.8, 'rgba(80,0,0,0.8)');   // deep red fading
+      ballGrad.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.fillStyle = ballGrad;
       ctx.fill();
       
-      // Draw the central core of the fluid ball
+      // Draw central core
       ctx.beginPath();
       ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
       ctx.fillStyle = 'black';
       ctx.fill();
       
-      // --------------------
-      // Draw the Wormhole Rings
-      // --------------------
-      // Use independent time offsets for each ring so they move fluidly on their own
+      // ----- Wormhole Rings -----
+      // Each ring gets its own time offset & rotation for fluid independent motion
       const ringAmplitude = isThinking ? 8 : 4;
       for (let ring = 0; ring < numRings; ring++) {
         let ringTime = fluidTime + ring * 0.5;
@@ -260,41 +269,40 @@
           let r = ringBase + distortion;
           let x = centerX + r * Math.cos(angle + ringRotation);
           let y = centerY + r * Math.sin(angle + ringRotation);
-          if (angle === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
+          if (angle === 0) { ctx.moveTo(x, y); }
+          else { ctx.lineTo(x, y); }
         }
         ctx.closePath();
-        // Set ring color to white with decreasing opacity for outer rings
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.5 - ring * 0.1})`;
+        // Wormhole rings in white with slight fading for outer rings
+        ctx.strokeStyle = `rgba(255,255,255,${0.5 - ring * 0.1})`;
         ctx.lineWidth = 2;
         ctx.stroke();
       }
       
-      // Increase fluidTime faster when "thinking" for a dynamic effect
-      fluidTime += isThinking ? 0.3 : 0.05;
+      // Ease the animation speed: smoothly approach fastSpeed when thinking, then ease back
+      const targetSpeed = isThinking ? fastSpeed : normalSpeed;
+      currentSpeed += (targetSpeed - currentSpeed) * 0.1;
+      fluidTime += currentSpeed;
+      
       requestAnimationFrame(drawFluidBallAndWormhole);
     }
     drawFluidBallAndWormhole();
     
-    /* ------------------------- */
-    /* Input & Popup Interaction */
-    /* ------------------------- */
+    /* ========= Input & Popup Interaction ========= */
     const inputBox = document.getElementById('inputBox');
     const popup = document.getElementById('popup');
     inputBox.addEventListener('input', () => {
       inputBox.classList.remove('animate-border');
-      // Restart the border animation
+      // Restart animation on the border
       void inputBox.offsetWidth;
       inputBox.classList.add('animate-border');
     });
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        isThinking = true;
+        isThinking = true;  // Trigger the enhanced (faster) animation and extra comets
         inputBox.disabled = true;
+        // After 2 seconds, gradually revert to normal and show the popup
         setTimeout(() => {
           isThinking = false;
           popup.style.display = 'block';
