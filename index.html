@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syncra - Dynamic Fluid Black Hole</title>
+  <title>Syncra - Fluid Ball & Wormhole</title>
   <style>
     /* Reset & Global Styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,7 +34,7 @@
       justify-content: center;
       gap: 30px;
     }
-    /* Logo Canvas for Dynamic Fluid Black Hole */
+    /* Logo Canvas for Fluid Ball & Wormhole */
     #logoCanvas {
       width: 200px;
       height: 200px;
@@ -89,19 +89,19 @@
 <body>
   <!-- Background Canvas -->
   <canvas id="backgroundCanvas"></canvas>
-
+  
   <div class="container">
-    <!-- Dynamic Fluid Black Hole Logo Canvas -->
+    <!-- Fluid Ball & Wormhole Logo Canvas -->
     <canvas id="logoCanvas" width="200" height="200"></canvas>
     <!-- Glass-Effect Input Box -->
     <input type="text" id="inputBox" class="glass-input" placeholder="Ask me something..." />
   </div>
-
+  
   <!-- Warning Popup -->
   <div class="popup" id="popup">
     awh snap, im really sorry, my database has not been enabled, im sorry
   </div>
-
+  
   <script>
     /* ------------------------- */
     /* Background Animation Code */
@@ -111,14 +111,14 @@
     let stars = [];
     const numStars = 200;
     let comet = null;
-
+    
     function resizeCanvas() {
       bgCanvas.width = window.innerWidth;
       bgCanvas.height = window.innerHeight;
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-
+    
     // Initialize twinkling stars
     function initStars() {
       stars = [];
@@ -133,7 +133,7 @@
       }
     }
     initStars();
-
+    
     // Initialize comet parameters
     function initComet() {
       comet = {
@@ -145,12 +145,12 @@
       };
     }
     initComet();
-
+    
     function updateBackground() {
       bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-
+    
       // Draw stars with twinkling effect
       for (let star of stars) {
         star.twinkle += star.speed;
@@ -160,7 +160,7 @@
         bgCtx.fillStyle = `rgba(255,255,255,${alpha})`;
         bgCtx.fill();
       }
-
+    
       // Update and draw comet
       if (comet) {
         comet.x += comet.speed;
@@ -185,34 +185,43 @@
       requestAnimationFrame(updateBackground);
     }
     updateBackground();
-
+    
     /* ------------------------- */
-    /* Dynamic Fluid Black Hole Logo */
+    /* Fluid Ball & Wormhole Animation */
     /* ------------------------- */
     const logoCanvas = document.getElementById('logoCanvas');
     const ctx = logoCanvas.getContext('2d');
     const centerX = logoCanvas.width / 2;
     const centerY = logoCanvas.height / 2;
+    
+    // Fluid ball parameters
     const numPoints = 40;
-    const baseRadius = 80;
+    const baseBallRadius = 40;
     let fluidTime = 0;
     let isThinking = false;
     let phases = [];
     for (let i = 0; i < numPoints; i++) {
       phases.push(Math.random() * Math.PI * 2);
     }
-
-    function drawDynamicFluidBlackHole() {
+    
+    // Wormhole ring parameters
+    const numRings = 3;
+    const baseRingStart = 60;
+    
+    function drawFluidBallAndWormhole() {
       ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
-
-      // Draw the outer swirling accretion disk (fluid shape)
+      
+      // --------------------
+      // Draw the Fluid Ball
+      // --------------------
       ctx.beginPath();
       const angleStep = (Math.PI * 2) / numPoints;
+      // Increase oscillation amplitude when "thinking"
+      const ballAmplitude = isThinking ? 8 : 4;
       for (let i = 0; i <= numPoints; i++) {
         let angle = i * angleStep;
-        const amplitude = isThinking ? 20 : 10;
-        let offset = Math.sin(fluidTime + phases[i % numPoints]) * amplitude;
-        let r = baseRadius + offset;
+        let offset = Math.sin(fluidTime + phases[i % numPoints]) * ballAmplitude;
+        let r = baseBallRadius + offset;
         let x = centerX + r * Math.cos(angle);
         let y = centerY + r * Math.sin(angle);
         if (i === 0) {
@@ -222,30 +231,54 @@
         }
       }
       ctx.closePath();
-      // Create a radial gradient for the accretion disk
-      let grad = ctx.createRadialGradient(centerX, centerY, baseRadius * 0.2, centerX, centerY, baseRadius);
-      grad.addColorStop(0, 'rgba(255, 140, 0, 1)'); // bright orange
-      grad.addColorStop(0.7, 'rgba(0, 0, 0, 0.8)');  // dark transition
-      grad.addColorStop(1, 'rgba(0, 0, 0, 1)');        // black
-      ctx.fillStyle = grad;
+      // Create a radial gradient for the fluid ball
+      let ballGrad = ctx.createRadialGradient(centerX, centerY, baseBallRadius * 0.3, centerX, centerY, baseBallRadius);
+      ballGrad.addColorStop(0, 'rgba(150, 0, 200, 1)'); // vibrant purple center
+      ballGrad.addColorStop(0.8, 'rgba(0, 0, 0, 0.8)');  
+      ballGrad.addColorStop(1, 'rgba(0, 0, 0, 1)');
+      ctx.fillStyle = ballGrad;
       ctx.fill();
-
-      // Draw the central event horizon as a solid black circle
+      
+      // Draw the central core of the fluid ball
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
       ctx.fillStyle = 'black';
       ctx.fill();
-
-      // Optional subtle stroke around the fluid shape
-      ctx.strokeStyle = 'rgba(255, 80, 0, 0.7)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      fluidTime += isThinking ? 0.2 : 0.05;
-      requestAnimationFrame(drawDynamicFluidBlackHole);
+      
+      // --------------------
+      // Draw the Wormhole Rings
+      // --------------------
+      // Parameters for wormhole rings: amplitude and rotation change when "thinking"
+      const ringAmplitude = isThinking ? 8 : 4;
+      const ringRotation = fluidTime * 0.2;
+      for (let ring = 0; ring < numRings; ring++) {
+        let ringBase = baseRingStart + ring * 10;
+        ctx.beginPath();
+        // Draw ring as a distorted circle (using polar coordinates)
+        for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
+          let distortion = Math.sin(angle * 5 + fluidTime + ring) * ringAmplitude;
+          let r = ringBase + distortion;
+          // Apply overall rotation for a swirling effect
+          let x = centerX + r * Math.cos(angle + ringRotation);
+          let y = centerY + r * Math.sin(angle + ringRotation);
+          if (angle === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.closePath();
+        // Use a luminous cyan with fading opacity for the wormhole rings
+        ctx.strokeStyle = `rgba(0, 255, 255, ${0.5 - ring * 0.1})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      
+      fluidTime += isThinking ? 0.15 : 0.05;
+      requestAnimationFrame(drawFluidBallAndWormhole);
     }
-    drawDynamicFluidBlackHole();
-
+    drawFluidBallAndWormhole();
+    
     /* ------------------------- */
     /* Input & Popup Interaction */
     /* ------------------------- */
@@ -257,11 +290,13 @@
       void inputBox.offsetWidth;
       inputBox.classList.add('animate-border');
     });
+    
     inputBox.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         isThinking = true;
         inputBox.disabled = true;
+        // Intensify the fluid effects briefly
         setTimeout(() => {
           isThinking = false;
           popup.style.display = 'block';
