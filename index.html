@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syncra - Animated Rings with Quad-In Easing & Individual Pulse</title>
+  <title>Syncra - Animated Rings Intro & Search Pulse</title>
   <style>
     /* Global Reset & Base Styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,7 +14,8 @@
     }
     /* Background Canvas */
     #backgroundCanvas {
-      position: fixed; top: 0; left: 0;
+      position: fixed;
+      top: 0; left: 0;
       width: 100%; height: 100%;
       z-index: 0;
     }
@@ -46,37 +47,41 @@
     }
     /* Glass-effect Input Box */
     .glass-input {
-      width: 300px; padding: 15px;
+      width: 300px;
+      padding: 15px;
       font-size: 16px;
-      border: 2px solid rgba(255,0,0,0);
+      border: none;
       border-radius: 10px;
-      background: rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05); /* More transparent */
       backdrop-filter: blur(10px);
       color: #fff;
       outline: none;
-      transition: border 0.3s ease;
+      transition: box-shadow 0.3s ease;
     }
     .glass-input:focus {
-      border: 2px solid rgba(255,0,0,1);
+      /* Subtle white glow */
+      box-shadow: 0 0 8px rgba(255,255,255,0.7);
     }
     .glass-input.animate-border {
-      animation: fluidBorder 0.5s ease;
+      animation: glowPulse 0.5s ease;
     }
-    @keyframes fluidBorder {
-      0% { border-width: 2px; }
-      50% { border-width: 4px; }
-      100% { border-width: 2px; }
+    @keyframes glowPulse {
+      0% { box-shadow: 0 0 4px rgba(255,255,255,0.4); }
+      50% { box-shadow: 0 0 8px rgba(255,255,255,0.7); }
+      100% { box-shadow: 0 0 4px rgba(255,255,255,0.4); }
     }
     /* Popup Styling */
     .popup {
       position: fixed;
-      top: 20%; left: 50%;
+      top: 20%;
+      left: 50%;
       transform: translate(-50%, -50%);
       background: rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
-      border: 2px solid rgba(255,0,0,1);
+      border: 2px solid rgba(255,255,255,0.5);
       border-radius: 10px;
-      padding: 20px; font-size: 18px;
+      padding: 20px;
+      font-size: 18px;
       color: #fff;
       display: none;
       z-index: 3;
@@ -93,7 +98,7 @@
   <div class="container">
     <!-- Logo Canvas for Animated Rings -->
     <canvas id="logoCanvas" width="200" height="200"></canvas>
-    <!-- Text Input (initially hidden) -->
+    <!-- Text Input Container -->
     <div id="textContainer">
       <input type="text" id="inputBox" class="glass-input" placeholder="Ask me something..." />
     </div>
@@ -107,11 +112,12 @@
   <script>
     /* ===== GLOBAL VARIABLES & HELPERS ===== */
     const introStartTime = performance.now();
-    let searchStartTime = null; // Set when user presses Enter
-    let isSearching = false;    // True during the search pulse phase
+    let searchStartTime = null; // Set when user clicks search
+    let isSearching = false;    // True during search pulse phase
+
     function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
     function lerp(a, b, t) { return a + (b - a) * t; }
-    // Quadratic easing in (quadIn): starts fast then slows down
+    // Quadratic ease-in: fast start then slow
     function quadIn(t) { return t * t; }
 
     /* ===== BACKGROUND ANIMATION (Stars & Comets) ===== */
@@ -215,13 +221,14 @@
     const ctx = logoCanvas.getContext('2d');
     const centerX = logoCanvas.width / 2;
     const centerY = logoCanvas.height / 2;
-    const numPoints = 40; // for drawing each ring's circumference
-    // We'll use rings only—no fluid ball fill.
-    // Intro: rings start from small (scale 0.5) to normal (scale 1)
-    const introRingsDelay = 0;       // Rings appear immediately
-    const introRingsDuration = 1000; // 1s fade-in for rings
+    const numPoints = 40; // used for drawing a ring
+    // For our new intro, we use two phases:
+    // Phase 1 (0-1000ms): draw a single ring scaling from 0.5 to 1.1
+    // Phase 2 (1000-2000ms): additional rings appear and the base ring scales from 1.1 to 1.0
+    const singleRingDuration = 1000; // in ms
+    const additionalRingsDuration = 1000; // in ms
 
-    // Animation variables for rings
+    // Animation variables for rings in normal mode (after intro)
     let fluidTime = 0;
     let lastFrameTime = performance.now();
     let currentSpeed = 0.05;
@@ -230,83 +237,94 @@
     let currentAmplitude = 4;
     const normalAmplitude = 4;
     const thinkingAmplitude = 8;
-    // For pulse effect on each ring, we use independent scale multipliers:
-    const pulseMagnitude = 0.2; // rings get 20% bigger at peak
+    // For search pulse in normal mode, each ring has its own target scale
     const numRings = 6;
-    // Initialize per-ring scale multipliers and easing factors
     let ringCurrentScales = new Array(numRings).fill(1);
     let ringTargetScales = new Array(numRings).fill(1);
     let ringEasing = [];
     for (let i = 0; i < numRings; i++) {
-      ringEasing.push(0.1 + Math.random() * 0.1); // random easing factor between 0.1 and 0.2
+      ringEasing.push(0.1 + Math.random() * 0.1); // easing between 0.1 and 0.2
     }
-    // For the intro, the base scale for all rings will be from 0.5 to 1
+    const pulseMultiplier = 1.2; // during search, rings scale to 1.2 times
+
+    // Helper function to draw a ring with given index, scale, and opacity
+    function drawRing(ringIndex, scale, opacity = 1) {
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.scale(scale, scale);
+      ctx.translate(-centerX, -centerY);
+      ctx.globalAlpha = opacity;
+      // Each ring has an independent time offset:
+      let ringTime = fluidTime + ringIndex * 0.5;
+      let ringRotation = ringTime * (0.2 + ringIndex * 0.05);
+      // Base radius increases for outer rings:
+      let ringBase = 40 + ringIndex * 8;
+      ctx.beginPath();
+      for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
+        let distortion = Math.sin(angle * 5 + ringTime) * currentAmplitude;
+        let r = ringBase + distortion;
+        let x = centerX + r * Math.cos(angle + ringRotation);
+        let y = centerY + r * Math.sin(angle + ringRotation);
+        if (angle === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `rgba(255,255,255,${0.7 - ringIndex * 0.1})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
     function drawRings() {
       const now = performance.now();
       const delta = (now - lastFrameTime) / 1000;
       lastFrameTime = now;
       const elapsed = now - introStartTime;
-      
+
       ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
-      
-      // Compute intro progress with quadratic ease-in for a fast-then-slow start
-      const ringsProgressRaw = clamp(elapsed / introRingsDuration, 0, 1);
-      const baseScale = lerp(0.5, 1, quadIn(ringsProgressRaw));
-      
-      // During search, update each ring's target scale independently:
-      for (let i = 0; i < numRings; i++) {
-        if (isSearching) {
-          // For example, each ring's target: base scale times a factor between 1.1 and 1.3
-          ringTargetScales[i] = 1 + 0.1 + (i * 0.03);
-        } else {
-          ringTargetScales[i] = 1;
+
+      if (elapsed < singleRingDuration) {
+        // Phase 1: Only one ring (ring 0) scales from 0.5 to 1.1 using quadratic easing.
+        const t = clamp(elapsed / singleRingDuration, 0, 1);
+        const scale = lerp(0.5, 1.1, quadIn(t));
+        drawRing(0, scale);
+      } else if (elapsed < singleRingDuration + additionalRingsDuration) {
+        // Phase 2: Base ring scales from 1.1 to 1.0 and additional rings fade in.
+        const t = clamp((elapsed - singleRingDuration) / additionalRingsDuration, 0, 1);
+        const baseScale = lerp(1.1, 1, quadIn(t));
+        // Draw the initial ring at full opacity.
+        drawRing(0, baseScale, 1);
+        // Draw additional rings with opacity t.
+        for (let i = 1; i < numRings; i++) {
+          drawRing(i, baseScale, t);
         }
-        // Update current scale with its own easing factor:
-        ringCurrentScales[i] += ringEasing[i] * (ringTargetScales[i] - ringCurrentScales[i]) * delta;
-      }
-      
-      // Draw each ring
-      for (let ring = 0; ring < numRings; ring++) {
-        ctx.save();
-        // Apply scaling: baseScale * individual ring multiplier
-        const finalScale = baseScale * ringCurrentScales[ring];
-        ctx.translate(centerX, centerY);
-        ctx.scale(finalScale, finalScale);
-        ctx.translate(-centerX, -centerY);
-        // Fade in rings with intro progress
-        ctx.globalAlpha = clamp(ringsProgressRaw, 0, 1);
-        // Compute independent rotation and distortion for each ring
-        let ringTime = fluidTime + ring * 0.5;
-        let ringRotation = ringTime * (0.2 + ring * 0.05);
-        // Base radius increases for outer rings
-        let ringBase = 40 + ring * 8;
-        ctx.beginPath();
-        for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
-          let distortion = Math.sin(angle * 5 + ringTime) * currentAmplitude;
-          let r = ringBase + distortion;
-          let x = centerX + r * Math.cos(angle + ringRotation);
-          let y = centerY + r * Math.sin(angle + ringRotation);
-          if (angle === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+      } else {
+        // Normal mode after intro.
+        // Update each ring's target scale based on search state.
+        for (let i = 0; i < numRings; i++) {
+          if (isSearching) {
+            // When searching, each ring's target scale is increased (e.g. 1.2 plus a slight variation per ring)
+            ringTargetScales[i] = 1.2 + i * 0.02;
+          } else {
+            ringTargetScales[i] = 1;
+          }
+          ringCurrentScales[i] += ringEasing[i] * (ringTargetScales[i] - ringCurrentScales[i]) * delta;
         }
-        ctx.closePath();
-        // White stroke; outer rings slightly more transparent
-        ctx.strokeStyle = `rgba(255,255,255,${0.7 - ring * 0.1})`;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.restore();
-        ctx.globalAlpha = 1;
+        // Draw all rings at their current scales.
+        for (let i = 0; i < numRings; i++) {
+          drawRing(i, ringCurrentScales[i]);
+        }
       }
-      
-      // Easing for amplitude (keeps current distortion smooth)
+
+      // Easing for amplitude (keeps distortion smooth)
       const targetAmplitude = isSearching ? thinkingAmplitude : normalAmplitude;
       currentAmplitude += (targetAmplitude - currentAmplitude) * 0.1 * delta;
-      
-      // Ease speed change
+
+      // Ease speed change.
       const targetSpeed = isSearching ? fastSpeed : normalSpeed;
       currentSpeed += (targetSpeed - currentSpeed) * 0.1 * delta;
       fluidTime += currentSpeed * delta * 60;
-      
       requestAnimationFrame(drawRings);
     }
     drawRings();
@@ -316,8 +334,8 @@
     function updateTextIntro() {
       const now = performance.now();
       const elapsed = now - introStartTime;
-      const introTextDelay = 2000;  // text appears after 2s
-      const introTextDuration = 1000; // fade in over 1s
+      const introTextDelay = 2000;  // Text appears after 2s
+      const introTextDuration = 1000; // Fade in over 1s
       const progress = clamp((elapsed - introTextDelay) / introTextDuration, 0, 1);
       if (progress >= 1) textContainer.classList.add('visible');
       requestAnimationFrame(updateTextIntro);
