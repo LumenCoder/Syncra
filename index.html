@@ -44,21 +44,19 @@
       opacity: 1;
       transform: translateY(0);
     }
-    /* Glass-Effect Input Box */
+    /* Glass-effect Input Box */
     .glass-input {
-      width: 300px;
-      padding: 15px;
+      width: 300px; padding: 15px;
       font-size: 16px;
       border: none;
       border-radius: 10px;
-      background: rgba(255,255,255,0.05); /* More transparent */
+      background: rgba(255,255,255,0.05);
       backdrop-filter: blur(10px);
       color: #fff;
       outline: none;
       transition: box-shadow 0.3s ease;
     }
     .glass-input:focus {
-      /* Subtle white glow */
       box-shadow: 0 0 8px rgba(255,255,255,0.7);
     }
     .glass-input.animate-border {
@@ -108,45 +106,35 @@
   <script>
     /* ===== GLOBAL VARIABLES & HELPERS ===== */
     const introStartTime = performance.now();
-    let searchStartTime = null; // Set when user presses Enter
-    let isSearching = false;    // True during the search pulse phase
-    let ringResponseActive = false;
-    let ringResponseStartTime = 0;
-    const ringResponseDuration = 2000; // 2 seconds for color change
+    let searchStartTime = null; // Set on search
+    let isSearching = false;    // True during search pulse
+    let responseActive = false; // When response color is active
+    let responseStartTime = 0;
+    const responseDuration = 2000; // 2s for color transition
 
     function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
     function lerp(a, b, t) { return a + (b - a) * t; }
-    // Quadratic ease-in function
+    // Quadratic ease-in (fast start then slow)
     function quadIn(t) { return t * t; }
-    // Ease-out bounce (for intro bounce effect)
+    // Ease-out bounce for bounce effect in intro
     function easeOutBounce(t) {
-      if (t < (1/2.75)) {
-        return 7.5625 * t * t;
-      } else if (t < (2/2.75)) {
-        t -= (1.5 / 2.75);
-        return 7.5625 * t * t + 0.75;
-      } else if (t < (2.5/2.75)) {
-        t -= (2.25 / 2.75);
-        return 7.5625 * t * t + 0.9375;
-      } else {
-        t -= (2.625 / 2.75);
-        return 7.5625 * t * t + 0.984375;
-      }
+      if (t < 1/2.75) return 7.5625*t*t;
+      else if (t < 2/2.75) { t -= 1.5/2.75; return 7.5625*t*t + 0.75; }
+      else if (t < 2.5/2.75) { t -= 2.25/2.75; return 7.5625*t*t + 0.9375; }
+      else { t -= 2.625/2.75; return 7.5625*t*t + 0.984375; }
     }
-    // Returns current ring stroke color based on response state.
+    // Compute ring color based on response state: interpolate from white to subtle red (220,50,50)
     function getRingColor(ringIndex) {
       const baseAlpha = 0.7 - ringIndex * 0.1;
-      if (ringResponseActive) {
+      if (responseActive) {
         const now = performance.now();
-        const t = clamp((now - ringResponseStartTime) / ringResponseDuration, 0, 1);
-        // Interpolate from subtle red (220,50,50) to white (255,255,255)
+        const t = clamp((now - responseStartTime) / responseDuration, 0, 1);
         const r = Math.round(lerp(220, 255, t));
         const g = Math.round(lerp(50, 255, t));
         const b = Math.round(lerp(50, 255, t));
         return `rgba(${r},${g},${b},${baseAlpha})`;
-      } else {
-        return `rgba(255,255,255,${baseAlpha})`;
       }
+      return `rgba(255,255,255,${baseAlpha})`;
     }
 
     /* ===== BACKGROUND ANIMATION (Stars & Comets) ===== */
@@ -157,9 +145,9 @@
     let comets = [];
     const minComets = 1;
     const maxComets = 5;
-    const introStarsDuration = 1000;       // Stars fade in over 1s
-    const introCometsDelay = 1000;           // Comets start after 1s
-    const introCometsDuration = 1000;        // Comets fade in over 1s
+    const introStarsDuration = 1000;  // 1s fade-in
+    const introCometsDelay = 1000;      // start after 1s
+    const introCometsDuration = 1000;   // 1s fade-in
 
     function resizeBgCanvas() {
       bgCanvas.width = window.innerWidth;
@@ -209,7 +197,6 @@
       bgCtx.fillStyle = '#000';
       bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
-      // Draw stars with fade-in
       for (let star of stars) {
         star.twinkle += star.speed;
         const baseAlpha = (Math.sin(star.twinkle) + 1) / 2;
@@ -220,7 +207,6 @@
         bgCtx.fill();
       }
 
-      // Draw comets with fade-in
       for (let comet of comets) {
         comet.x += comet.speed;
         comet.y += comet.speed * comet.angle;
@@ -250,11 +236,11 @@
     const ctx = logoCanvas.getContext('2d');
     const centerX = logoCanvas.width / 2;
     const centerY = logoCanvas.height / 2;
-    const numPoints = 40; // used for drawing a ring
+    const numPoints = 40; // For drawing a ring's circumference
 
     // Intro phases:
-    // Phase 1 (0-1000ms): Draw main ring (ring 0) scaling from 0.5 to 1.1 (quadIn easing)
-    // Phase 2 (1000-2000ms): Main ring bounces from 1.1 to 1 using easeOutBounce, additional rings fade in.
+    // Phase 1 (0-1000ms): Main ring (index 0) scales from 0.5 to 1.1.
+    // Phase 2 (1000-2000ms): Main ring bounces from 1.1 to 1 (using easeOutBounce) while additional rings (indices 1..5) emerge from the main ring.
     const phase1Duration = 1000;
     const phase2Duration = 1000;
 
@@ -267,7 +253,8 @@
     let currentAmplitude = 4;
     const normalAmplitude = 4;
     const thinkingAmplitude = 8;
-    // For search pulse, each ring has its own target scale.
+
+    // For search pulse in normal mode, each ring has its own target scale and easing factor.
     const numRings = 6;
     let ringCurrentScales = new Array(numRings).fill(1);
     let ringTargetScales = new Array(numRings).fill(1);
@@ -275,7 +262,37 @@
     for (let i = 0; i < numRings; i++) {
       ringEasing.push(0.1 + Math.random() * 0.1);
     }
-    const pulseMultiplier = 1.2; // during search, rings scale to ~1.2
+    const searchPulseFactor = 1.2; // rings grow to 1.2x during search
+
+    // Draw a single ring by index, given scale and opacity.
+    function drawRing(ringIndex, scale, opacity = 1) {
+      ctx.save();
+      // For a water ripple effect, the ring's base radius increases with ring index.
+      let ringBase = 40 + ringIndex * 8;
+      // Apply scaling and rotation
+      ctx.translate(centerX, centerY);
+      ctx.scale(scale, scale);
+      // For continuous movement, rotate each ring slightly.
+      let ringRotation = fluidTime * (0.1 + ringIndex * 0.02);
+      ctx.rotate(ringRotation);
+      ctx.translate(-centerX, -centerY);
+      ctx.globalAlpha = opacity;
+      ctx.beginPath();
+      for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
+        let distortion = Math.sin(angle * 5 + fluidTime + ringIndex * 0.5) * currentAmplitude;
+        let r = ringBase + distortion;
+        let x = centerX + r * Math.cos(angle);
+        let y = centerY + r * Math.sin(angle);
+        if (angle === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = getRingColor(ringIndex);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
 
     function drawRings() {
       const now = performance.now();
@@ -286,7 +303,7 @@
       ctx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
 
       if (elapsed < phase1Duration) {
-        // Phase 1: Only main ring appears, scaling from 0.5 to 1.1.
+        // Phase 1: Only main ring appears, scaling from 0.5 to 1.1 (quadIn easing)
         const t = clamp(elapsed / phase1Duration, 0, 1);
         const scale = lerp(0.5, 1.1, quadIn(t));
         drawRing(0, scale, 1);
@@ -294,19 +311,21 @@
         // Phase 2: Main ring bounces from 1.1 to 1 using easeOutBounce.
         const t = clamp((elapsed - phase1Duration) / phase2Duration, 0, 1);
         const bounceScale = lerp(1.1, 1, easeOutBounce(t));
-        // Draw main ring at bounceScale.
+        // Draw main ring.
         drawRing(0, bounceScale, 1);
-        // Draw additional rings fading in.
+        // Additional rings emerge: they animate from the main ring's scale to their own designated scale.
         const additionalOpacity = t;
         for (let i = 1; i < numRings; i++) {
-          drawRing(i, bounceScale, additionalOpacity);
+          // They start with scale equal to bounceScale and then rapidly adjust to 1.
+          const ringScale = lerp(bounceScale, 1, quadIn(t));
+          drawRing(i, ringScale, additionalOpacity);
         }
       } else {
-        // Normal mode: Each ring animates independently.
+        // Normal mode (after intro)
+        // Update each ring's target scale based on search state.
         for (let i = 0; i < numRings; i++) {
           if (isSearching) {
-            // During search, each ring's target scale is increased.
-            ringTargetScales[i] = pulseMultiplier + i * 0.02;
+            ringTargetScales[i] = searchPulseFactor + i * 0.02;
           } else {
             ringTargetScales[i] = 1;
           }
@@ -317,52 +336,15 @@
         }
       }
 
-      // Easing for amplitude (for distortion effect)
+      // Easing for amplitude.
       const targetAmplitude = isSearching ? thinkingAmplitude : normalAmplitude;
       currentAmplitude += (targetAmplitude - currentAmplitude) * 0.1 * delta;
+      // Ease speed change.
       const targetSpeed = isSearching ? fastSpeed : normalSpeed;
       currentSpeed += (targetSpeed - currentSpeed) * 0.1 * delta;
       fluidTime += currentSpeed * delta * 60;
       requestAnimationFrame(drawRings);
     }
-
-    // Draw a ring by index, given scale and opacity.
-    function drawRing(ringIndex, scale, opacity = 1) {
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.scale(scale, scale);
-      ctx.translate(-centerX, -centerY);
-      ctx.globalAlpha = opacity;
-      let ringTime = fluidTime + ringIndex * 0.5;
-      // For the main ring (index 0), add extra rotation so it moves visibly.
-      let ringRotation = ringIndex === 0 ? fluidTime * 0.5 : ringTime * (0.2 + ringIndex * 0.05);
-      let ringBase = 40 + ringIndex * 8;
-      ctx.beginPath();
-      for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
-        let distortion = Math.sin(angle * 5 + ringTime) * currentAmplitude;
-        let r = ringBase + distortion;
-        let x = centerX + r * Math.cos(angle + ringRotation);
-        let y = centerY + r * Math.sin(angle + ringRotation);
-        if (angle === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      // Use dynamic color if response is active.
-      ctx.strokeStyle = getRingColor(ringIndex);
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.restore();
-      ctx.globalAlpha = 1;
-      
-      // If response color is active and duration elapsed, reset it.
-      if (ringResponseActive) {
-        if ((now - ringResponseStartTime) >= ringResponseDuration) {
-          ringResponseActive = false;
-        }
-      }
-    }
-
-    // Start drawing rings.
     drawRings();
 
     /* ===== TEXT INPUT FADE-IN ===== */
@@ -392,11 +374,11 @@
         isSearching = true;
         searchStartTime = performance.now();
         inputBox.disabled = true;
-        // When search completes, trigger response color change:
         setTimeout(() => {
           isSearching = false;
-          ringResponseActive = true;
-          ringResponseStartTime = performance.now();
+          // Trigger response color change.
+          responseActive = true;
+          responseStartTime = performance.now();
           popup.style.display = 'block';
           popup.style.animation = "fadeIn 0.5s ease";
         }, 2000);
